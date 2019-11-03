@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <iostream>
 
+#include "util/Format.h"
+
 using namespace std;
 
 typedef uint8_t   u1;
@@ -43,8 +45,10 @@ struct DexHeader {
 };
 
 void printDexHeader(DexHeader* dexHeader) {
-	cout << "header_item:" << endl;
+    printf("header_item:\n");
+
 	cout << "magic: " << dexHeader->magic << endl;
+
 	cout << "checksum: " << dexHeader->checksum << endl;
 	cout << "signature: " << dexHeader->signature << endl;
 	cout << "file_size: " << dexHeader->file_size << endl;

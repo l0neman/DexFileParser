@@ -1,23 +1,21 @@
 #include "DexParser.h"
 #include <iostream>
-#include "DexFile.h"
-
-using namespace std;
+#include "type/DexFile.h"
 
 void DexParser::parse(char const* dexFilePath) {
-	cout << "parse: " << dexFilePath << endl;
+    printf("parse: %s\n", dexFilePath);
 
 	FILE* dexFile = NULL;
 	errno_t s = fopen_s(&dexFile, dexFilePath, "rb");
-	if (s != 0) {
-		cout << "open dex file error." << endl;
+	if (s != 0 || dexFile == NULL) {
+        printf("open dex file error.\n");
 		return;
 	}
 
 	DexHeader dexHeader;
 	size_t i = fread(&dexHeader, sizeof(DexHeader), 1, dexFile);
 	if (i != 1) {
-		cout << "parse dex header error." << endl;
+        printf("parse dex header error.\n");
 		return;
 	}
 

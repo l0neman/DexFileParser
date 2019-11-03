@@ -5,5 +5,5 @@ int main()
 {
     std::cout << "Hello World!\n";
 	DexParser dexParser;
-	dexParser.parse("./dexfile/Hello.dex");
+	dexParser.parse("..\\..\\..\\dexfile\\Hello.dex");
 }
