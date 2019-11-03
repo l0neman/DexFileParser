@@ -2,22 +2,22 @@
 #include <iostream>
 #include "type/DexFile.h"
 
-void DexParser::parse(char const* dexFilePath) {
-    printf("parse: %s\n", dexFilePath);
+void DexParser::parse(char const* dex_file_path) {
+    printf("parse: %s\n", dex_file_path);
 
-	FILE* dexFile = NULL;
-	errno_t s = fopen_s(&dexFile, dexFilePath, "rb");
-	if (s != 0 || dexFile == NULL) {
+	FILE* dex_file = nullptr;
+    const errno_t s = fopen_s(&dex_file, dex_file_path, "rb");
+	if (s != 0 || dex_file == nullptr) {
         printf("open dex file error.\n");
 		return;
 	}
 
-	DexHeader dexHeader;
-	size_t i = fread(&dexHeader, sizeof(DexHeader), 1, dexFile);
+	DexHeader dex_header{};
+    const size_t i = fread(&dex_header, sizeof(DexHeader), 1, dex_file);
 	if (i != 1) {
         printf("parse dex header error.\n");
 		return;
 	}
 
-	printDexHeader(&dexHeader);
+	print_dex_header(&dex_header);
 }

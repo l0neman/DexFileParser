@@ -1,10 +1,10 @@
-#ifndef DEXPARSER_H_
-#define DEXPARSER_H_
+#ifndef DEX_PARSER_H
+#define DEX_PARSER_H
 
 class DexParser
 {
 public:
-	void parse(char const* dexFilePath);
+    static void parse(char const* dex_file_path);
 };
 
-#endif // !DEXPARSER_H_
+#endif // !DEX_PARSER_H

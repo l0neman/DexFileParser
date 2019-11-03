@@ -10,8 +10,8 @@ add_executable (
 	type/DexFile.h
 	DexParser.cpp
 	DexParser.h
-	util/Format.cpp
-	util/Format.h
+	util/Formatter.cpp
+	util/Formatter.h
 	util/Printer.cpp
 	util/Printer.h
 )
