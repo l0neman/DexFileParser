@@ -5,19 +5,19 @@
 void DexParser::parse(char const* dex_file_path) {
     printf("parse: %s\n", dex_file_path);
 
-	FILE* dex_file = nullptr;
+    FILE* dex_file = nullptr;
     const errno_t s = fopen_s(&dex_file, dex_file_path, "rb");
-	if (s != 0 || dex_file == nullptr) {
+    if (s != 0 || dex_file == nullptr) {
         printf("open dex file error.\n");
-		return;
-	}
+        return;
+    }
 
-	DexHeader dex_header{};
+    DexHeader dex_header{};
     const size_t i = fread(&dex_header, sizeof(DexHeader), 1, dex_file);
-	if (i != 1) {
+    if (i != 1) {
         printf("parse dex header error.\n");
-		return;
-	}
+        return;
+    }
 
-	print_dex_header(&dex_header);
+    print_dex_header(&dex_header);
 }
