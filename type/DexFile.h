@@ -51,6 +51,14 @@ struct DexStringId
     u4 string_data_off;
 };
 
+/* type_id_item */
+struct DexTypeId
+{
+    u4 descriptionIdx;
+};
+
+
+
 struct DexFile
 {
     
