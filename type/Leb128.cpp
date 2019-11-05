@@ -1,5 +1,9 @@
 #include "Leb128.h"
 
+#ifndef _HEY_I_AM_RUNNING_STATIC_ANALYZER
+#define __builtin_expect(e,c) (e)
+#endif
+
 #define LIKELY( exp )    (__builtin_expect( (exp) != 0, true ))
 #define UNLINKELY( exp ) (__builtin_expect( (exp) != 0, false ))
 

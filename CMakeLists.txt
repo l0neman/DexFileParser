@@ -8,6 +8,8 @@ add_executable (
     DexFileParser
     DexFileParser.cpp
     type/DexFile.h
+    type/Leb128.cpp
+    type/Leb128.h
     DexParser.cpp
     DexParser.h
     util/Formatter.cpp
