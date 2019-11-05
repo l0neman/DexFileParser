@@ -12,8 +12,8 @@ void DexParser::parse(char const* dex_file_path) {
         return;
     }
 
-    DexHeader dex_header{};
-    const size_t i = fread(&dex_header, sizeof(DexHeader), 1, dex_file);
+    header_item dex_header{};
+    const size_t i = fread(&dex_header, sizeof(header_item), 1, dex_file);
     if (i != 1) {
         printf("parse dex header error.\n");
         return;

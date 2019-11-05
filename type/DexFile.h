@@ -18,8 +18,7 @@ typedef int16_t   s2;
 typedef int32_t   s4;
 typedef int64_t   s8;
 
-/* header_item */
-struct DexHeader {
+struct header_item {
     u1 magic[8];        // 魔数。
     u1 checksum;        // 文件剩余内容（除 magic 和此字段之外的所有内容)的 adler32 校验和；用于检测文件损坏情况。
     u1 signature[20];   // 文件剩余内容（除 magic、checksum 和此字段之外的所有内容)的 SHA-1 签名（哈希)；用于对文件进行唯一标识。
@@ -45,8 +44,7 @@ struct DexHeader {
     u4 data_off;        // 从文件开头到 data 区段开头的偏移量。
 };
 
-/* map_item */
-struct DexMapItem
+struct map_item
 {
     u2 type;   // 项的类型。
     u2 unused; //（未使用。
@@ -54,34 +52,36 @@ struct DexMapItem
     u4 offset; // 从文件开头到相关项的偏移量。
 };
 
-/* map_list */
-struct DexMapList
+struct map_list
 {
-    u4 size;            // 列表的大小（以条目数表示）。
-    DexMapItem list[1]; // 列表的元素。
+    u4 size;          // 列表的大小（以条目数表示）。
+    map_item list[1]; // 列表的元素。
 };
 
 
-/* string_id_item */
-struct DexStringId
+struct string_id_item
 {
-    u4 string_data_off;
+    u4 string_data_off; // 从文件开头到此项的字符串数据的偏移量。该偏移量应该是到 data 区段中某个位置的偏移量。
 };
 
-/* type_id_item */
-struct DexTypeId
+struct type_id_item
 {
-    u4 descriptionIdx;
+    u4 descriptor_idx; // 此类描述符字符串的 string_ids 列表中的索引。该字符串必须符合上文定义的 TypeDescriptor 的语法。
 };
 
-
+struct proto_id_item
+{
+    u4 shorty_ids;      // 此原型的简短式描述符字符串的 string_ids 列表中的索引。该字符串必须符合上文定义的 ShortyDescriptor 的语法，而且必须与该项的返回类型和参数相对应。
+    u4 return_type_idx; // 此原型的返回类型的 type_ids 列表中的索引。
+    u4 parameters_off;  // 从文件开头到此原型的参数类型列表的偏移量；如果此原型没有参数，则该值为 0。该偏移量（如果为非零值）应该位于 data 区段中，且其中的数据应采用下文中“"type_list"”指定的格式。此外，不得对列表中的类型 void 进行任何引用。
+};
 
 struct DexFile
 {
     
 };
 
-inline void print_dex_header(DexHeader* dexHeader) {
+inline void print_dex_header(header_item* dexHeader) {
     printf("header_item:\n");
 
     printf("magic: ");
