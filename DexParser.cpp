@@ -2,16 +2,21 @@
 #include <iostream>
 #include "type/DexFile.h"
 
-void DexParser::parse(char const* dex_file_path) {
-    printf("parse: %s\n", dex_file_path);
+void parse_map_list(char const* FILE, int offset)
+{
 
-    FILE* dex_file = nullptr;
+}
+
+DexParser::DexParser(char const* dex_file_path)
+{
+    printf("parse: %s\n", dex_file_path);
     const errno_t s = fopen_s(&dex_file, dex_file_path, "rb");
     if (s != 0 || dex_file == nullptr) {
         printf("open dex file error.\n");
-        return;
     }
+}
 
+void DexParser::parse() {
     header_item dex_header{};
     const size_t i = fread(&dex_header, sizeof(header_item), 1, dex_file);
     if (i != 1) {
@@ -20,4 +25,9 @@ void DexParser::parse(char const* dex_file_path) {
     }
 
     print_dex_header(&dex_header);
+}
+
+DexParser::~DexParser()
+{
+    fclose(dex_file);
 }
