@@ -18,34 +18,35 @@ typedef int16_t   s2;
 typedef int32_t   s4;
 typedef int64_t   s8;
 
+// 字节序标记常量。
 enum
 {
-  ENDIAN_CONSTANT         = 0x12345678,
-  REVERSE_ENDIAN_CONSTANT = 0x78563412,
+    ENDIAN_CONSTANT         = 0x12345678,
+    REVERSE_ENDIAN_CONSTANT = 0x78563412,
 };
 
 enum
 {
-    TYPE_HEADER_ITEM                = 0x0000,
-    TYPE_STRING_ID_ITEM             = 0x0001,
-    TYPE_TYPE_ID_ITEM               = 0x0002,
-    TYPE_PROTO_ID_ITEM              = 0x0003,
-    TYPE_FIELD_ID_ITEM              = 0x0004,
-    TYPE_METHOD_ID_ITEM             = 0x0005,
-    TYPE_CLASS_DEF_ITEM             = 0x0006,
-    TYPE_CALL_SITE_ID_ITEM          = 0x0007,
-    TYPE_METHOD_HANDLE_ITEM         = 0x0008,
-    TYPE_MAP_LIST                   = 0x1000,
-    TYPE_TYPE_LIST                  = 0x1001,
-    TYPE_ANNOTATION_SET_REF_LIST    = 0x1002,
-    TYPE_ANNOTATION_SET_ITEM        = 0x1003,
-    TYPE_CLASS_DATA_ITEM            = 0x2000,
-    TYPE_CODE_ITEM                  = 0x2001,
-    TYPE_STRING_DATA_ITEM           = 0x2002,
-    TYPE_DEBUG_INFO_ITEM            = 0x2003,
-    TYPE_ANNOTATION_ITEM            = 0x2004,
-    TYPE_ENCODED_ARRAY_ITEM         = 0x2005,
-    TYPE_ANNOTATIONS_DIRECTORY_ITEM = 0x2006,
+    TYPE_HEADER_ITEM                = 0x0000, // header_item	            size: 0x70
+    TYPE_STRING_ID_ITEM             = 0x0001, // string_id_item	            size: 0x04
+    TYPE_TYPE_ID_ITEM               = 0x0002, // type_id_item	            size: 0x04
+    TYPE_PROTO_ID_ITEM              = 0x0003, // proto_id_item	            size: 0x0c
+    TYPE_FIELD_ID_ITEM              = 0x0004, // field_id_item	            size: 0x08
+    TYPE_METHOD_ID_ITEM             = 0x0005, // method_id_item	            size: 0x08
+    TYPE_CLASS_DEF_ITEM             = 0x0006, // class_def_item	            size: 0x20
+    TYPE_CALL_SITE_ID_ITEM          = 0x0007, // call_site_id_item	        size: 0x04
+    TYPE_METHOD_HANDLE_ITEM         = 0x0008, // method_handle_item	        size: 0x08
+    TYPE_MAP_LIST                   = 0x1000, // map_list	                size: 4 + (item.size * 12)
+    TYPE_TYPE_LIST                  = 0x1001, // type_list	                size: 4 + (item.size * 2)
+    TYPE_ANNOTATION_SET_REF_LIST    = 0x1002, // annotation_set_ref_list    size: 4 + (item.size * 4)
+    TYPE_ANNOTATION_SET_ITEM        = 0x1003, // annotation_set_item	    size: 4 + (item.size * 4)
+    TYPE_CLASS_DATA_ITEM            = 0x2000, // class_data_item	        size: 隐式；必须解析
+    TYPE_CODE_ITEM                  = 0x2001, // code_item	                size: 隐式；必须解析
+    TYPE_STRING_DATA_ITEM           = 0x2002, // string_data_item	        size: 隐式；必须解析
+    TYPE_DEBUG_INFO_ITEM            = 0x2003, // debug_info_item	        size: 隐式；必须解析
+    TYPE_ANNOTATION_ITEM            = 0x2004, // annotation_item	        size: 隐式；必须解析
+    TYPE_ENCODED_ARRAY_ITEM         = 0x2005, // encoded_array_item	        size: 隐式；必须解析
+    TYPE_ANNOTATIONS_DIRECTORY_ITEM = 0x2006, // annotations_directory_item size: 隐式；必须解析
 };
 
 struct header_item
@@ -136,10 +137,18 @@ struct map_item
     u4 offset; // 从文件开头到相关项的偏移量。
 };
 
+inline void print_map_item(map_item const* map_item)
+{
+    printf("\nmap_item:\n");
+    printf("type: 0x%x\n", map_item->type);
+    printf("size: %d\n", map_item->size);
+    printf("offset: %d\n", map_item->offset);
+}
+
 struct map_list
 {
     u4 size;          // 列表的大小（以条目数表示）。
-    map_item list[1]; // 列表的元素。
+    map_item* list;   // 列表的元素。
 };
 
 struct string_id_item
@@ -277,36 +286,36 @@ struct DexFile
 
 };
 
-inline void print_dex_header(header_item* dexHeader) {
-    printf("header_item:\n");
+inline void print_dex_header(header_item* dex_header) {
+    printf("\nheader_item:\n");
 
     printf("magic: ");
-    Printer::print_hex_array(dexHeader->magic, 8);
-    printf("checksum: %d\n", dexHeader->checksum);
+    Printer::print_hex_array(dex_header->magic, 8);
+    printf("checksum: %d\n", dex_header->checksum);
 
     printf("signature: ");
-    Printer::print_hex_array(dexHeader->signature, 20);
+    Printer::print_hex_array(dex_header->signature, 20);
 
-    printf("file_size: %d\n", dexHeader->file_size);
-    printf("header_size: %d\n", dexHeader->header_size);
-    printf("endian_tag: %d\n", dexHeader->endian_tag);
-    printf("link_size: %d\n", dexHeader->link_size);
-    printf("link_off: %d\n", dexHeader->link_off);
-    printf("map_off: %d\n", dexHeader->map_off);
-    printf("string_ids_size: %d\n", dexHeader->string_ids_size);
-    printf("string_ids_off: %d\n", dexHeader->string_ids_off);
-    printf("type_ids_size: %d\n", dexHeader->type_ids_size);
-    printf("type_ids_off: %d\n", dexHeader->type_ids_off);
-    printf("proto_ids_size: %d\n", dexHeader->proto_ids_size);
-    printf("proto_ids_off: %d\n", dexHeader->proto_ids_off);
-    printf("field_ids_size: %d\n", dexHeader->field_ids_size);
-    printf("field_ids_off: %d\n", dexHeader->field_ids_off);
-    printf("method_ids_size: %d\n", dexHeader->method_ids_size);
-    printf("method_ids_off: %d\n", dexHeader->method_ids_off);
-    printf("class_defs_size: %d\n", dexHeader->class_defs_size);
-    printf("class_defs_off: %d\n", dexHeader->class_defs_off);
-    printf("data_size: %d\n", dexHeader->data_size);
-    printf("data_off: %d\n", dexHeader->data_off);
+    printf("file_size: %d\n", dex_header->file_size);
+    printf("header_size: %d\n", dex_header->header_size);
+    printf("endian_tag: %d\n", dex_header->endian_tag);
+    printf("link_size: %d\n", dex_header->link_size);
+    printf("link_off: %d\n", dex_header->link_off);
+    printf("map_off: %d\n", dex_header->map_off);
+    printf("string_ids_size: %d\n", dex_header->string_ids_size);
+    printf("string_ids_off: %d\n", dex_header->string_ids_off);
+    printf("type_ids_size: %d\n", dex_header->type_ids_size);
+    printf("type_ids_off: %d\n", dex_header->type_ids_off);
+    printf("proto_ids_size: %d\n", dex_header->proto_ids_size);
+    printf("proto_ids_off: %d\n", dex_header->proto_ids_off);
+    printf("field_ids_size: %d\n", dex_header->field_ids_size);
+    printf("field_ids_off: %d\n", dex_header->field_ids_off);
+    printf("method_ids_size: %d\n", dex_header->method_ids_size);
+    printf("method_ids_off: %d\n", dex_header->method_ids_off);
+    printf("class_defs_size: %d\n", dex_header->class_defs_size);
+    printf("class_defs_off: %d\n", dex_header->class_defs_off);
+    printf("data_size: %d\n", dex_header->data_size);
+    printf("data_off: %d\n", dex_header->data_off);
 }
 
 #endif // !DEX_FILE_H

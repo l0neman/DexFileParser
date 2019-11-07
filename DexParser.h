@@ -7,10 +7,12 @@ class DexParser
 {
 public:
     DexParser(char const* dex_file_path);
-    ~DexParser();
     void parse();
+    ~DexParser();
 private:
+    void parse_map_list();
     FILE* dex_file = nullptr;
+    unsigned int offset;
 };
 
 #endif // !DEX_PARSER_H
