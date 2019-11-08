@@ -20,9 +20,15 @@ private:
     void parse_class_defs();
     void call_site_ids();
     void method_handles();
+    const char* get_string_from_string_list(unsigned int index);
     FILE* dex_file = nullptr;
     header_item dex_header{};
     string_id_item* string_ids;
+    // string pool info.
+    unsigned int string_list_size;
+    char** string_list;
+
+    type_id_item* type_list;
 };
 
 #endif // !DEX_PARSER_H

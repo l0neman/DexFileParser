@@ -1,4 +1,3 @@
-#include <iostream>
 #include <cstring>
 
 #include "DexParser.h"
@@ -59,6 +58,12 @@ void DexParser::parse_string_ids()
     int offset = this->dex_header.string_ids_off;
 
     const int string_ids_size = this->dex_header.string_ids_size;
+    if (string_ids_size == 0)
+    {
+        printf("not found string ids.\n");
+        return;
+    }
+
     printf("string pool count: %d\n", string_ids_size);
     printf("string pool offset: %d\n", offset);
 
@@ -72,11 +77,16 @@ void DexParser::parse_string_ids()
 
     const size_t string_id_item_size = sizeof(string_id_item);
     printf("string item offset array: \n");
+
+    this->string_list = new char* [string_ids_size];
+    this->string_list_size = string_ids_size;
+    
     for(int i = 0; i < string_ids_size; i++)
     {
         u4 str_off = this->string_ids[i].string_data_off;
+#ifdef _STRING_PRINT_
         printf("\nstring offset: %d\n", str_off);
-
+#endif
         if (fseek(this->dex_file, offset,0))
         {
             printf("seek file error.");
@@ -119,23 +129,63 @@ void DexParser::parse_string_ids()
 
         str_buf[str_size - 1] = '\0';
 
+        this->string_list[i] = str_buf;
+
         printf("string: %s\n", str_buf);
 
-        delete[] str_buf;
-        str_buf = nullptr;
+        // delete[] str_buf;
+        // str_buf = nullptr;
     }
 
     printf("\n");
 }
 
+// lazy
+const char * DexParser::get_string_from_string_list(unsigned int index)
+{
+    return this->string_list[index];
+}
+
 void DexParser::parse_type_ids()
 {
-    
+    const u4 type_ids_size = this->dex_header.type_ids_size;
+    if (type_ids_size == 0)
+    {
+        printf("not found type ids.\n");
+        return;
+    }
+
+    printf("type ids size: %d\n", type_ids_size);
+    printf("type ids offset: %d\n", this->dex_header.type_ids_off);
+
+    if (fseek(this->dex_file, this->dex_header.type_ids_off, 0))
+    {
+        printf("seek file error.\n");
+        return;
+    }
+
+    type_id_item* type_ids = new type_id_item[type_ids_size];
+
+    if (!fread(type_ids, sizeof(type_id_item), type_ids_size, 
+        this->dex_file))
+    {
+        printf("read file error.\n");
+        return;
+    }
+
+    for (int i = 0; i < type_ids_size; i++)
+    {
+        printf("type: %s\n", get_string_from_string_list(
+            type_ids[i].descriptor_idx));
+    }
+
+    delete[] type_ids;
+    type_ids = nullptr;
 }
 
 void DexParser::parse_proto_ids()
 {
-    
+   
 }
 
 void DexParser::parse_field_ids()
@@ -182,6 +232,7 @@ void DexParser::parse()
     // print_dex_header(&dex_header);
     // parse_map_list();
     parse_string_ids();
+    parse_type_ids();
 }
 
 DexParser::~DexParser()
@@ -190,4 +241,12 @@ DexParser::~DexParser()
 
     delete[] this->string_ids;
     this->string_ids = nullptr;
+
+    for (int i = 0; i < this->string_list_size; i++)
+    {
+        delete[] this->string_list[i];
+        this->string_list[i] = nullptr;
+    }
+
+    delete[] this->string_list;
 }
