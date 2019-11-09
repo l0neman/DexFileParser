@@ -3,7 +3,11 @@
 #
 cmake_minimum_required (VERSION 3.8)
 
-# add_definitions(-D_STRING_PRINT_)
+# enable map list info.
+# add_definitions(-D_MAP_LIST_PRINT)
+
+# enable string list info.
+# add_definitions(-D_STRING_INFO_PRINT_)
 
 # Add source to this project's executable.
 add_executable (

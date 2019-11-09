@@ -18,6 +18,9 @@ typedef int16_t   s2;
 typedef int32_t   s4;
 typedef int64_t   s8;
 
+typedef u1* uleb128;
+typedef u1* uleb128p1;
+
 // 字节序标记常量。
 enum
 {
@@ -48,6 +51,34 @@ enum
     TYPE_ENCODED_ARRAY_ITEM         = 0x2005, // encoded_array_item	        size: 隐式；必须解析
     TYPE_ANNOTATIONS_DIRECTORY_ITEM = 0x2006, // annotations_directory_item size: 隐式；必须解析
 };
+
+inline const char* type_string(const u2 type)
+{
+    switch (type)
+    {
+    case TYPE_HEADER_ITEM:return "header_item";
+    case TYPE_STRING_ID_ITEM:return "string_id_item";
+    case TYPE_TYPE_ID_ITEM:return "type_id_item";
+    case TYPE_PROTO_ID_ITEM:return "proto_id_item";
+    case TYPE_FIELD_ID_ITEM:return "field_id_item";
+    case TYPE_METHOD_ID_ITEM:return "method_id_item";
+    case TYPE_CLASS_DEF_ITEM:return "class_def_item";
+    case TYPE_CALL_SITE_ID_ITEM:return "call_site_id_item";
+    case TYPE_METHOD_HANDLE_ITEM:return "method_handle_item";
+    case TYPE_MAP_LIST:return "map_list";
+    case TYPE_TYPE_LIST:return "type_list";
+    case TYPE_ANNOTATION_SET_REF_LIST:return "annotation_set_ref_list";
+    case TYPE_ANNOTATION_SET_ITEM:return "annotation_set_item";
+    case TYPE_CLASS_DATA_ITEM:return "class_data_item";
+    case TYPE_CODE_ITEM:return "code_item";
+    case TYPE_STRING_DATA_ITEM:return "string_data_item";
+    case TYPE_DEBUG_INFO_ITEM:return "debug_info_item";
+    case TYPE_ANNOTATION_ITEM:return "annotation_item";
+    case TYPE_ENCODED_ARRAY_ITEM:return "encoded_array_item";
+    case TYPE_ANNOTATIONS_DIRECTORY_ITEM:return "annotations_directory_item";
+    default:return"KNOWN";
+    }
+}
 
 struct header_item
 {
@@ -141,6 +172,7 @@ inline void print_map_item(map_item const* map_item)
 {
     printf("\nmap_item:\n");
     printf("type: 0x%x\n", map_item->type);
+    printf("type desc: %s\n", type_string(map_item->type));
     printf("size: %d\n", map_item->size);
     printf("offset: %d\n", map_item->offset);
 }
@@ -158,6 +190,19 @@ struct string_id_item
       偏移量。
      */
     u4 string_data_off;
+};
+
+struct string_data_item
+{
+    /*
+      此字符串的大小；以 UTF-16 代码单元（在许多系统中为“字符串长度”）为单位。
+      也就是说，这是该字符串的解码长度（编码长度隐含在 0 字节的位置）。
+     */
+    uleb128 utf16_size;
+    /*
+      一系列 MUTF-8 代码单元（又称八位字节），后跟一个值为 0 的字节。
+     */
+    u1* data;
 };
 
 struct type_id_item
@@ -280,6 +325,172 @@ struct call_site_id_item
     u4 call_site_off;
 };
 
+struct encoded_field
+{
+    /*
+      此字段标识（包括名称和描述符）的 field_ids 列表中的索引；
+      它会表示为与列表中前一个元素的索引之间的差值。列表中第一个元素的索引则直接表示出来。
+     */
+    uleb128 field_idx_diff;
+    /*
+      字段的访问标记（public、final 等）。
+     */
+    uleb128 access_flags;
+};
+
+struct encoded_method
+{
+    /*
+      此方法标识（包括名称和描述符）的 method_ids 列表中的索引；
+      它会表示为与列表中前一个元素的索引之间的差值。列表中第一个元素的索引则直接表示出来。
+     */
+    uleb128 method_idx_diff;
+    /*
+      方法的访问标记（public、final 等）。
+     */
+    uleb128 access_flags;
+    /*
+      从文件开头到此方法代码结构的偏移量；如果此方法是 abstract 或 native，则该值为 0。
+      该偏移量应该是到 data 区段中某个位置的偏移量。数据格式由下文的“code_item”指定。
+     */
+    uleb128 code_off;
+};
+
+struct class_data_item
+{
+    /* 此项中定义的静态字段的数量 */
+    uleb128 static_fields_size;
+    /* 此项中定义的实例字段的数量 */
+    uleb128 instance_fields_size;
+    /* 此项中定义的直接方法的数量 */
+    uleb128 direct_methods_size;
+    /* 此项中定义的虚拟方法的数量 */
+    uleb128 virtual_methods_size;
+    /*
+      定义的静态字段；以一系列编码元素的形式表示。这些字段必须按 field_idx 以升序进行排序。
+     */
+    encoded_field* static_fields;
+    /*
+      定义的实例字段；以一系列编码元素的形式表示。这些字段必须按 field_idx 以升序进行排序。
+     */
+    encoded_field* instance_fields;
+    /*
+      定义的直接（static、private 或构造函数的任何一个）方法；以一系列编码元素的形式
+      表示。这些方法必须按 method_idx 以升序进行排序。
+     */
+    encoded_method* direct_methods;
+    /*
+      定义的虚拟（非 static、private 或构造函数）方法；以一系列编码元素的形式表示。
+      此列表不得包括继承方法，除非被此项所表示的类覆盖。这些方法必须按 method_idx 以
+      升序进行排序。虚拟方法的 method_idx 不得与任何直接方法相同。
+     */
+    encoded_method* virtual_methods;
+};
+
+struct type_item
+{
+    u2 type_idx; // type_ids 列表中的索引。
+};
+
+struct type_list
+{
+    u4 size;          // 列表的大小（以条目数表示）
+    type_item* list;; // 列表的元素。
+};
+
+struct code_item
+{
+    u2 registers_size;
+    u2 ins_size;
+    u2 outs_size;
+    u2 tries_size;
+    u4 debug_info_off;
+    u4 insns_size;
+    u2* insns;
+    // optional: u2 padding;
+    // optional: try_item[tries_size]
+    // optional: encode_catch_handler_list;
+};
+
+struct debug_info_item
+{
+    /*
+      状态机的 line 寄存器的初始值。不表示实际的位置条目。
+     */
+    uleb128 line_start;
+    /*
+      已编码的参数名称的数量。每个方法参数都应该有一个名称，但不包括实例方法的 this
+     （如果有）。
+     */
+    uleb128 parameters_size;
+    /*
+      方法参数名称的字符串索引。NO_INDEX 的编码值表示该关联参数没有可用的名称。
+      该类型描述符和签名隐含在方法描述符和签名中。
+     */
+    uleb128p1* parameter_names;
+};
+
+struct field_annotation
+{
+    /* 字段（带注释）标识的 field_ids 列表中的索引 */
+    u4 field_idx;
+    /*
+      从文件开头到该字段的注释列表的偏移量。该偏移量应该是到 data 区段中某个位置的偏
+      移量。数据格式由下文的“annotation_set_item”指定。
+     */
+    u4 annotations_off;
+};
+
+struct method_annotation
+{
+    /* 方法（带注释）标识的 method_ids 列表中的索引 */
+    u4 method_idx;
+    /*
+      从文件开头到该方法注释列表的偏移量。该偏移量应该是到 data 区段中某个位置的偏移量。
+      数据格式由下文的“annotation_set_item”指定。
+     */
+    u4 annotations_off;
+};
+
+struct parameter_annotation
+{
+    /* 方法（其参数带注释）标识的 method_ids 列表中的索引 */
+    u4 method_idx;
+    /*
+      从文件开头到该方法参数的注释列表的偏移量。该偏移量应该是到 data 区段中某个位置的
+      偏移量。数据格式由下文的“annotation_set_ref_list”指定。
+     */
+    u4 annotations_off;
+};
+
+struct annotations_directory_item
+{
+    /*
+      从文件开头到直接在该类上所做的注释的偏移量；如果该类没有任何直接注释，则该值为 0。
+      该偏移量（如果为非零值）应该是到 data 区段中某个位置的偏移量。数据格式由下文的
+      “annotation_set_item”指定。
+     */
+    u4 class_annotations_off;
+    /* 此项所注释的字段数量 */
+    u4 fields_size;
+    /* 此项所注释的方法数量 */
+    u4 annotated_methods_size;
+    /* 此项所注释的方法参数列表的数量 */
+    u4 annotated_parameters_size;
+    /*
+      Optional，所关联字段的注释列表。该列表中的元素必须按 field_idx 以升序进行排序。
+     */
+    field_annotation* field_annotations;
+    /*
+      Optional，所关联方法的注释列表。该列表中的元素必须按 method_idx 以升序进行排序。
+     */
+    method_annotation* method_annotations;
+    /*
+      Optional，所关联方法参数的注释列表。该列表中的元素必须按 method_idx 以升序进行排序。
+     */
+    parameter_annotation* parameter_annotation;
+};
+
 struct DexFile
 {
     header_item header;
@@ -287,8 +498,6 @@ struct DexFile
 };
 
 inline void print_dex_header(header_item* dex_header) {
-    printf("\nheader_item:\n");
-
     printf("magic: ");
     Printer::print_hex_array(dex_header->magic, 8);
     printf("checksum: %d\n", dex_header->checksum);
