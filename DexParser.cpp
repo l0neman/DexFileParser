@@ -4,9 +4,26 @@
 #include "type/DexFile.h"
 #include "type/Leb128.h"
 
+// header_item
+// string_id_item
+// type_id_item
+// proto_id_item
+// field_id_item
+// method_id_item
+// class_def_item
+// map_list
+// type_list
+// annotation_set_item
+// class_data_item
+// code_item
+// string_data_item
+// debug_info_item
+// annotation_item
+// encoded_array_item
+// annotation_directory_item
 void DexParser::parse_map_list()
 {
-    const int offset = this->dex_header_.map_off;
+    const u4 offset = this->dex_header_.map_off;
     // seek to map list offset.
     if (0 != fseek(dex_file_, offset, 0))
     {
@@ -37,12 +54,13 @@ void DexParser::parse_map_list()
         return;
     }
 
-    this->map_list_.list = new map_item[this->map_list_.size];
     if (this->map_list_.size <= 0)
         return;
 
+    this->map_list_.list = new map_item[this->map_list_.size];
+
     if (0 == fread(this->map_list_.list, sizeof(map_item), 
-        map_list_.size, dex_file_))
+        this->map_list_.size, dex_file_))
     {
         printf("read map_list.list error.\n");
         return;
@@ -115,6 +133,10 @@ void DexParser::parse_string_list(const u4 size, const u4 offset)
 
         u4 size = Leb128::decode_unsigned_leb128(data);
         const u4 length = Leb128::unsigned_leb238_size(size);
+
+        // reset struct.
+        this->string_list_[i] = {nullptr, nullptr};
+
 #ifdef _STRING_INFO_PRINT_
         printf("leb128 length: %d\n", length);
         printf("string size: %d\n", size);
@@ -158,6 +180,11 @@ const char * DexParser::get_string_from_string_list(const u4 index) const
     return reinterpret_cast<char*>(this->string_list_[index].data);
 }
 
+const char* DexParser::get_type_string(const u4 index) const
+{
+    return get_string_from_string_list(this->type_list_[index].descriptor_idx);
+}
+
 void DexParser::parse_type_ids(const u4 size, const u4 offset)
 {
     const u4 type_ids_size = size;
@@ -176,10 +203,10 @@ void DexParser::parse_type_ids(const u4 size, const u4 offset)
         return;
     }
 
-    type_id_item* type_ids = new type_id_item[type_ids_size];
+    this->type_list_ = new type_id_item[type_ids_size];
 
-    if (0 == fread(type_ids, sizeof(type_id_item), type_ids_size, 
-        this->dex_file_))
+    if (0 == fread(this->type_list_, sizeof(type_id_item), 
+        type_ids_size, this->dex_file_))
     {
         printf("read file error.\n");
         return;
@@ -188,16 +215,38 @@ void DexParser::parse_type_ids(const u4 size, const u4 offset)
     for (u4 i = 0; i < type_ids_size; i++)
     {
         printf("type: %s\n", get_string_from_string_list(
-            type_ids[i].descriptor_idx));
+            this->type_list_[i].descriptor_idx));
     }
-
-    delete[] type_ids;
-    type_ids = nullptr;
 }
 
-void DexParser::parse_proto_ids(const u4 offset)
+void DexParser::parse_proto_ids(const u4 size, const u4 offset)
 {
-   
+   if (0 != fseek(this->dex_file_, offset, 0))
+   {
+       printf("seek file error.\n");
+       return;
+   }
+
+   printf("proto ids size: %d\n", size);
+   printf("proto ids offset: %d\n\n", offset);
+
+   this->proto_list_ = new proto_id_item[size];
+
+    if (0 == fread(this->proto_list_, sizeof(proto_id_item), size,
+        this->dex_file_))
+    {
+        printf("read file error.");
+        return;
+    }
+
+    for (u4 i = 0; i < size; i++)
+    {
+        printf("shorty: %s\n", get_string_from_string_list(
+            this->proto_list_[i].shorty_ids));
+        printf("return type: %s\n", get_type_string(
+            this->proto_list_[i].return_type_idx));
+        printf("parameters offset: %d\n\n", this->proto_list_[i].parameters_off);
+    }
 }
 
 void DexParser::parse_field_ids(const u4 offset)
@@ -270,6 +319,15 @@ void DexParser::parse()
         case TYPE_TYPE_ID_ITEM:
             parse_type_ids(item.size, item.offset);
             break;
+        case TYPE_PROTO_ID_ITEM:
+            parse_proto_ids(item.size, item.offset);
+            break;
+        case TYPE_FIELD_ID_ITEM:
+            break;
+        case TYPE_METHOD_ID_ITEM:
+            break;
+        case TYPE_CLASS_DEF_ITEM:
+            break;
         default:
             printf("item: %s\n", type_string(item.type));
         }
@@ -288,24 +346,38 @@ DexParser::~DexParser()
         this->string_ids_ = nullptr;
     }
 
-    // delete string list.
-    /*if (nullptr != this->string_list_)
-    {
-        for (u4 i = 0; i < this->string_list_size_; i++)
-        {
-            delete[] this->string_list_[i];
-            this->string_list_[i] = nullptr;
-        }
-
-        delete[] this->string_list_;
-        this->string_list_ = nullptr;
-    }*/
-
     // delete map list.
     if (nullptr != this->map_list_.list)
     {
         delete[] this->map_list_.list;
         this->map_list_.list = nullptr;
+    }
+
+    // delete string list.
+    if (nullptr != this->string_list_)
+    {
+        for (u4 i = 0; i < this->string_list_size_; i++)
+        {
+            delete[] this->string_list_[i].data;
+            this->string_list_[i].data = nullptr;
+        }
+
+        delete[] this->string_list_;
+        this->string_list_ = nullptr;
+    }
+
+    // delete type list.
+    if (nullptr != this->type_list_)
+    {
+        delete[] this->type_list_;
+        this->type_list_ = nullptr;
+    }
+
+    // delete proto list.
+    if (nullptr != this->proto_list_)
+    {
+        delete[] this->proto_list_;
+        this->proto_list_ = nullptr;
     }
 
     printf("end breakpoint.");
