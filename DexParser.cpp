@@ -32,23 +32,23 @@ void DexParser::parse_map_list()
     }
 
     // parse map list size.
-    this->map_list_.size = -1;
+    this->map_list_.size = 0;
     if (0 == fread(&this->map_list_.size, sizeof(int), 1, dex_file_))
     {
         printf("read file error.\n");
         return;
     }
 
-    if(this->map_list_.size == -1)
+    if(this->map_list_.size == 0)
     {
         printf("map_list.size error.\n");
         return;
     }
 
-    printf("map list size: %d\n", this->map_list_.size);
+    printf("map list size: %u\n", this->map_list_.size);
 
     // move to next map item offset.
-    if (0 != fseek(dex_file_,  offset + sizeof(u4), 0))
+    if (0 != fseek(dex_file_, offset + sizeof(u4), 0))
     {
         printf("seek file error.\n");
         return;
@@ -58,6 +58,7 @@ void DexParser::parse_map_list()
         return;
 
     this->map_list_.list = new map_item[this->map_list_.size];
+    this->map_list_.list_ = make_unique<map_item[]>(this->map_list_.size);
 
     if (0 == fread(this->map_list_.list, sizeof(map_item), 
         this->map_list_.size, dex_file_))
@@ -92,8 +93,8 @@ void DexParser::parse_string_list(const u4 size, const u4 offset)
         return;
     }
 
-    printf("string ids count: %d\n", string_ids_size);
-    printf("string ids offset: %d\n", offset);
+    printf("string ids count: %u\n", string_ids_size);
+    printf("string ids offset: %u\n", offset);
 
     // parse string id items.
     this->string_ids_ = new string_id_item[string_ids_size];
@@ -122,6 +123,7 @@ void DexParser::parse_string_list(const u4 size, const u4 offset)
         }
 
         // leb 为 1~5 byte，那么为了解析它，给予 5 byte 的缓冲。
+        // todo: bad implementation.
         u1 leb128_buffer[5];
 
         if (0 == fread(&leb128_buffer, sizeof(u1), 5, this->dex_file_))
@@ -201,8 +203,8 @@ void DexParser::parse_type_ids(const u4 size, const u4 offset)
         return;
     }
 
-    printf("type ids size: %d\n", type_ids_size);
-    printf("type ids offset: %d\n", offset);
+    printf("type ids size: %u\n", type_ids_size);
+    printf("type ids offset: %u\n", offset);
 
     if (0 != fseek(this->dex_file_, offset, 0))
     {
@@ -330,8 +332,8 @@ void DexParser::parse_method_ids(const u4 size, const u4 offset) const
 
 void DexParser::parse_class_defs(const u4 size, const u4 offset) const
 {
-    printf("class defs size: %d\n", size);
-    printf("class defs offset: %d\n\n", offset);
+    printf("class defs size: %u\n", size);
+    printf("class defs offset: %u\n\n", offset);
 
     if (0 != fseek(this->dex_file_, offset, 0))
     {
@@ -365,8 +367,8 @@ void DexParser::parse_class_defs(const u4 size, const u4 offset) const
 
 void DexParser::parse_class_data_list(const u4 size, const u4 offset) const
 {
-    printf("class data list size: %d\n", size);
-    printf("class data list offset: %d\n", offset);
+    printf("class data list size: %u\n", size);
+    printf("class data list offset: %u\n", offset);
 
     if (0 != fseek(this->dex_file_, offset, 0))
     {
@@ -378,7 +380,21 @@ void DexParser::parse_class_data_list(const u4 size, const u4 offset) const
 
     for (u4 i = 0; i < size; i++)
     {
-        
+        u1 leb128_buffer[5];
+
+        if (0 == fread(&leb128_buffer, sizeof(u1), 5, this->dex_file_))
+        {
+            printf("read file error.");
+            return;
+        }
+
+        const u1* p1 = leb128_buffer;
+        const u1** data = &p1;
+
+        u4 size = Leb128::decode_unsigned_leb128(data);
+        const u4 length = Leb128::unsigned_leb238_size(size);
+
+
     }
 
     delete[] class_data_list;
@@ -469,6 +485,7 @@ void DexParser::parse()
             printf("ignore.\n");
             break;
         case TYPE_CLASS_DATA_ITEM:
+            parse_class_data_list(item.size, item.offset);
             break;
         case TYPE_CODE_ITEM:
             break;

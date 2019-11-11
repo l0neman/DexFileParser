@@ -277,13 +277,14 @@ inline void print_map_item(map_item const* map_item)
     printf("type: 0x%x\n", map_item->type);
     printf("type desc: %s\n", type_string(map_item->type));
     printf("size: %d\n", map_item->size);
-    printf("offset: %d\n", map_item->offset);
+    printf("offset: %u\n", map_item->offset);
 }
 
 struct map_list
 {
     u4 size;          // 列表的大小（以条目数表示）。
     map_item* list;   // 列表的元素。
+    unique_ptr<map_item[]> list_;
 };
 
 struct string_id_item
