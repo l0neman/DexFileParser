@@ -260,7 +260,7 @@ void DexParser::parse_proto_ids(const u4 size, const u4 offset)
 #endif
 }
 
-void DexParser::parse_field_ids(const u4 size, const u4 offset)
+void DexParser::parse_field_ids(const u4 size, const u4 offset) const
 {
     printf("field list size: %d\n", size);
     printf("field list offset: %d\n\n", offset);
@@ -328,7 +328,7 @@ void DexParser::parse_method_ids(const u4 size, const u4 offset) const
     method_list = nullptr;
 }
 
-void DexParser::parse_class_def_list(const u4 size, const u4 offset) const
+void DexParser::parse_class_defs(const u4 size, const u4 offset) const
 {
     printf("class defs size: %d\n", size);
     printf("class defs offset: %d\n\n", offset);
@@ -361,6 +361,28 @@ void DexParser::parse_class_def_list(const u4 size, const u4 offset) const
 
     delete[] class_def_list;
     class_def_list = nullptr;
+}
+
+void DexParser::parse_class_data_list(const u4 size, const u4 offset) const
+{
+    printf("class data list size: %d\n", size);
+    printf("class data list offset: %d\n", offset);
+
+    if (0 != fseek(this->dex_file_, offset, 0))
+    {
+        printf("seek file error.\n");
+        return;
+    }
+
+    class_data_item* class_data_list = new class_data_item[size];
+
+    for (u4 i = 0; i < size; i++)
+    {
+        
+    }
+
+    delete[] class_data_list;
+    class_data_list = nullptr;
 }
 
 void DexParser::call_site_ids()
@@ -435,7 +457,31 @@ void DexParser::parse()
             parse_method_ids(item.size, item.offset);
             break;
         case TYPE_CLASS_DEF_ITEM:
-            parse_class_def_list(item.size, item.offset);
+            parse_class_defs(item.size, item.offset);
+            break;
+        case TYPE_MAP_LIST:
+            printf("ignore.\n");
+            break;
+        case TYPE_TYPE_LIST:
+            printf("ignore.\n");
+            break;
+        case TYPE_ANNOTATION_SET_ITEM:
+            printf("ignore.\n");
+            break;
+        case TYPE_CLASS_DATA_ITEM:
+            break;
+        case TYPE_CODE_ITEM:
+            break;
+        case TYPE_STRING_DATA_ITEM:
+            printf("ignore.\n");
+            break;
+        case TYPE_DEBUG_INFO_ITEM:
+            break;
+        case TYPE_ANNOTATION_ITEM:
+            break;
+        case TYPE_ENCODED_ARRAY_ITEM:
+            break;
+        case TYPE_ANNOTATIONS_DIRECTORY_ITEM:
             break;
         default:
             printf("item: %s\n", type_string(item.type));

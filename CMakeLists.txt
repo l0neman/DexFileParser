@@ -22,7 +22,10 @@ add_definitions(-D_MAP_LIST_PRINT_)
 # add_definitions(-D_METHOD_LIST_INFO_)
 
 # enable class def list info.
-add_definitions(-D_CLASS_DEF_LIST_INFO_)
+# add_definitions(-D_CLASS_DEF_LIST_INFO_)
+
+# enable class data list info.
+add_definitions(-D_CLASS_DATA_LIST)
 
 # Add source to this project's executable.
 add_executable (
