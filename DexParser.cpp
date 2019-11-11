@@ -66,8 +66,10 @@ void DexParser::parse_map_list()
         return;
     }
 
+#ifdef _MAP_LIST_PRINT_
     for (u4 i = 0; i < this->map_list_.size; i++)
         print_map_item(&this->map_list_.list[i]);
+#endif
 }
 /*
    - header_item
@@ -83,7 +85,7 @@ void DexParser::parse_string_list(const u4 size, const u4 offset)
         return;
     }
 
-    const int string_ids_size = size;
+    const u4 string_ids_size = size;
     if (string_ids_size == 0)
     {
         printf("not found string ids.\n");
@@ -180,9 +182,14 @@ const char * DexParser::get_string_from_string_list(const u4 index) const
     return reinterpret_cast<char*>(this->string_list_[index].data);
 }
 
-const char* DexParser::get_type_string(const u4 index) const
+const char* DexParser::get_type_description(const u4 index) const
 {
     return get_string_from_string_list(this->type_list_[index].descriptor_idx);
+}
+
+proto_id_item DexParser::get_proto_item(const u4 index) const
+{
+    return this->proto_list_[index];
 }
 
 void DexParser::parse_type_ids(const u4 size, const u4 offset)
@@ -212,23 +219,25 @@ void DexParser::parse_type_ids(const u4 size, const u4 offset)
         return;
     }
 
+#ifdef _TYPE_LIST_INFO_
     for (u4 i = 0; i < type_ids_size; i++)
     {
         printf("type: %s\n", get_string_from_string_list(
             this->type_list_[i].descriptor_idx));
     }
+#endif
 }
 
 void DexParser::parse_proto_ids(const u4 size, const u4 offset)
 {
-   if (0 != fseek(this->dex_file_, offset, 0))
-   {
+    printf("proto ids size: %d\n", size);
+    printf("proto ids offset: %d\n\n", offset);
+
+    if (0 != fseek(this->dex_file_, offset, 0))
+    {
        printf("seek file error.\n");
        return;
-   }
-
-   printf("proto ids size: %d\n", size);
-   printf("proto ids offset: %d\n\n", offset);
+    }
 
    this->proto_list_ = new proto_id_item[size];
 
@@ -239,29 +248,119 @@ void DexParser::parse_proto_ids(const u4 size, const u4 offset)
         return;
     }
 
+#ifdef _PROTO_LIST_INFO_
     for (u4 i = 0; i < size; i++)
     {
         printf("shorty: %s\n", get_string_from_string_list(
             this->proto_list_[i].shorty_ids));
-        printf("return type: %s\n", get_type_string(
+        printf("return type: %s\n", get_type_description(
             this->proto_list_[i].return_type_idx));
         printf("parameters offset: %d\n\n", this->proto_list_[i].parameters_off);
     }
+#endif
 }
 
-void DexParser::parse_field_ids(const u4 offset)
+void DexParser::parse_field_ids(const u4 size, const u4 offset)
 {
-    
+    printf("field list size: %d\n", size);
+    printf("field list offset: %d\n\n", offset);
+
+    if (0 != fseek(this->dex_file_, offset, 0))
+    {
+        printf("seek file error.\n");
+        return;
+    }
+
+    field_id_item* field_list = new field_id_item[size];
+
+    if (0 == fread(field_list, sizeof(field_id_item), size, 
+        this->dex_file_))
+    {
+        printf("read file error.\n");
+        return;
+    }
+
+#ifdef _FIELD_LIST_INFO_
+    for (u4 i = 0; i < size; i++)
+    {
+        printf("field name: %s\n", get_string_from_string_list(field_list[i].name_idx));
+        printf("parent class name: %s\n", get_type_description(field_list[i].class_idx));
+        printf("type name: %s\n\n", get_type_description(field_list[i].type_idx));
+    }
+#endif
+
+    delete[] field_list;
+    field_list = nullptr;
 }
 
-void DexParser::parse_method_ids(const u4 offset)
+void DexParser::parse_method_ids(const u4 size, const u4 offset) const
 {
-    
+    printf("method ids size: %d\n", size);
+    printf("method ids offset: %d\n\n", offset);
+
+    if (0 != fseek(this->dex_file_, offset, 0))
+    {
+        printf("seek file error.\n");
+        return;
+    }
+
+    method_id_item* method_list = new method_id_item[size];
+
+    if (0 == fread(method_list, sizeof(method_id_item), size, 
+        this->dex_file_))
+    {
+        printf("read file error.\n");
+        return;
+    }
+
+#ifdef _METHOD_LIST_INFO_
+    for (u4 i = 0; i < size; i++)
+    {
+        printf("method name: %s\n", get_string_from_string_list(
+            method_list[i].name_idx));
+        printf("method proto return type: %s\n", get_type_description(
+            get_proto_item(method_list[i].proto_idx).return_type_idx));
+        printf("parent class name: %s\n\n", get_type_description(method_list[i].class_idx));
+    }
+#endif
+
+    delete[] method_list;
+    method_list = nullptr;
 }
 
-void DexParser::parse_class_defs()
+void DexParser::parse_class_def_list(const u4 size, const u4 offset) const
 {
-    
+    printf("class defs size: %d\n", size);
+    printf("class defs offset: %d\n\n", offset);
+
+    if (0 != fseek(this->dex_file_, offset, 0))
+    {
+        printf("seek file error.\n");
+        return;
+    }
+
+    class_def_item* class_def_list = new class_def_item[size];
+
+    if (0 == fread(class_def_list, sizeof(class_def_item), size, 
+        this->dex_file_))
+    {
+        printf("read file error.\n");
+        return;
+    }
+
+#ifdef _CLASS_DEF_LIST_INFO_
+    for (u4 i = 0; i < size; i++)
+    {
+        printf("class name: %s\n", get_type_description(class_def_list[i].class_idx));
+        printf("access flags: ");
+        print_access_flags_description(class_def_list[i].access_flag);
+        printf("\n\n");
+    }
+#endif
+
+
+    delete[] class_def_list;
+    class_def_list = nullptr;
 }
 
 void DexParser::call_site_ids()
@@ -311,6 +410,13 @@ void DexParser::parse()
     {
         const map_item item = map_list_.list[i];
         printf("\n>>>>>>>>>>>> parse %s:\n\n", type_string(item.type));
+
+        if (item.size == 0)
+        {
+            printf("item is empty.\n");
+            continue;
+        }
+
         switch(item.type)
         {
         case TYPE_STRING_ID_ITEM:
@@ -323,10 +429,13 @@ void DexParser::parse()
             parse_proto_ids(item.size, item.offset);
             break;
         case TYPE_FIELD_ID_ITEM:
+            parse_field_ids(item.size, item.offset);
             break;
         case TYPE_METHOD_ID_ITEM:
+            parse_method_ids(item.size, item.offset);
             break;
         case TYPE_CLASS_DEF_ITEM:
+            parse_class_def_list(item.size, item.offset);
             break;
         default:
             printf("item: %s\n", type_string(item.type));

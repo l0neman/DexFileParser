@@ -16,13 +16,14 @@ private:
     void parse_string_list(const u4 size, const u4 offset);
     void parse_type_ids(const u4 size, const u4 offset);
     void parse_proto_ids(const u4 size, const u4 offset);
-    void parse_field_ids(const u4 offset);
-    void parse_method_ids(const u4 offset);
-    void parse_class_defs();
+    void parse_field_ids(const u4 size, const u4 offset);
+    void parse_method_ids(const u4 size, const u4 offset) const;
+    void parse_class_def_list(const u4 size, const u4 offset) const;
     void call_site_ids();
     void method_handles();
     const char* get_string_from_string_list(const u4 index) const;
-    const char* get_type_string(const u4 index) const;
+    const char* get_type_description(const u4 index) const;
+    proto_id_item get_proto_item(const u4 index) const;
 
     FILE* dex_file_;
     // ÎÄ¼þÍ·¡£
