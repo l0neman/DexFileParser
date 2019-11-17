@@ -123,8 +123,7 @@ void DexParser::parse_string_list(const u4 size, const u4 offset)
         }
 
         // leb 为 1~5 byte，那么为了解析它，给予 5 byte 的缓冲。
-        // todo: bad implementation.
-        u1 leb128_buffer[5];
+        u1 *leb128_buffer = new u1[5];
 
         if (0 == fread(&leb128_buffer, sizeof(u1), 5, this->dex_file_))
         {
@@ -136,10 +135,11 @@ void DexParser::parse_string_list(const u4 size, const u4 offset)
         const u1** data = &p1;
 
         u4 size = Leb128::decode_unsigned_leb128(data);
-        const u4 length = Leb128::unsigned_leb238_size(size);
+        const u4 length = Leb128::unsigned_leb128_size(size);
 
         // reset struct.
-        this->string_list_[i] = {nullptr, nullptr};
+        this->string_list_[i].data = nullptr;
+        this->string_list_[i].utf16_size = {0, nullptr, 0};
 
 #ifdef _STRING_INFO_PRINT_
         printf("leb128 length: %d\n", length);
@@ -169,7 +169,7 @@ void DexParser::parse_string_list(const u4 size, const u4 offset)
 
         str_buf[str_size - 1] = '\0';
 
-        this->string_list_[i].utf16_size = leb128_buffer;
+        this->string_list_[i].utf16_size = { 0, nullptr, 0 };
         this->string_list_[i].data = reinterpret_cast<u1*>(str_buf);
 
 #ifdef _STRING_INFO_PRINT_
@@ -378,9 +378,11 @@ void DexParser::parse_class_data_list(const u4 size, const u4 offset) const
 
     class_data_item* class_data_list = new class_data_item[size];
 
+    u4 seek_add = 0;
     for (u4 i = 0; i < size; i++)
     {
-        u1 leb128_buffer[5];
+        // parse static_fields_size.
+        u1 *leb128_buffer = new u1[5];
 
         if (0 == fread(&leb128_buffer, sizeof(u1), 5, this->dex_file_))
         {
@@ -388,13 +390,75 @@ void DexParser::parse_class_data_list(const u4 size, const u4 offset) const
             return;
         }
 
-        const u1* p1 = leb128_buffer;
-        const u1** data = &p1;
+        class_data_item item = class_data_list[i];
 
-        u4 size = Leb128::decode_unsigned_leb128(data);
-        const u4 length = Leb128::unsigned_leb238_size(size);
+        item.static_fields_size = {};
+        parse_uleb128(leb128_buffer, &item.static_fields_size);
+        printf("static fields size: %d\n", item.static_fields_size.value);
+        seek_add += item.static_fields_size.length;
 
+        // parse instance_field_size.
+        leb128_buffer = new u1[5];
 
+        if (0 != fseek(this->dex_file_, seek_add, 0))
+        {
+            printf("seek file error.\n");
+            return;
+        }
+
+        if (0 == fread(&leb128_buffer, sizeof(u1), 5, this->dex_file_))
+        {
+            printf("read file error.");
+            return;
+        }
+
+        item.instance_fields_size = {};
+        parse_uleb128(leb128_buffer, &item.instance_fields_size);
+        printf("instance fields size: %d\n", item.instance_fields_size.value);
+        seek_add += item.instance_fields_size.length;
+
+        // parse direct_methods_size.
+        leb128_buffer = new u1[5];
+
+        if (0 != fseek(this->dex_file_, seek_add, 0))
+        {
+            printf("seek file error.\n");
+            return;
+        }
+
+        if (0 == fread(&leb128_buffer, sizeof(u1), 5, this->dex_file_))
+        {
+            printf("read file error.");
+            return;
+        }
+
+        item.direct_methods_size = {};
+        parse_uleb128(leb128_buffer, &item.direct_methods_size);
+        printf("direct methods size: %d\n", item.direct_methods_size.value);
+        seek_add += item.direct_methods_size.length;
+
+        // parse virtual_methods_size.
+        leb128_buffer = new u1[5];
+
+        if (0 != fseek(this->dex_file_, seek_add, 0))
+        {
+            printf("seek file error.\n");
+            return;
+        }
+
+        if (0 == fread(&leb128_buffer, sizeof(u1), 5, this->dex_file_))
+        {
+            printf("read file error.");
+            return;
+        }
+ 
+        item.virtual_methods_size = {};
+        parse_uleb128(leb128_buffer, &item.virtual_methods_size);
+        printf("virtual methods size: %d\n", item.virtual_methods_size.value);
+        seek_add += item.virtual_methods_size.length;
+
+        // parse static_fields.
+        
     }
 
     delete[] class_data_list;
@@ -532,6 +596,9 @@ DexParser::~DexParser()
         {
             delete[] this->string_list_[i].data;
             this->string_list_[i].data = nullptr;
+
+            delete[] this->string_list_[i].utf16_size.data;
+            this->string_list_[i].utf16_size.data = nullptr;
         }
 
         delete[] this->string_list_;

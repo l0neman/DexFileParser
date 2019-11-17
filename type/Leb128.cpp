@@ -90,7 +90,7 @@ uint32_t Leb128::decode_unsigned_leb128_p1(uint8_t const** data)
     return decode_unsigned_leb128(data) - 1;
 }
 
-uint32_t Leb128::unsigned_leb238_size(uint32_t data)
+uint32_t Leb128::unsigned_leb128_size(uint32_t data)
 {
     int count = 0;
     do

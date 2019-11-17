@@ -5,6 +5,7 @@
 #include <iostream>
 #include <string>
 #include "../util/Printer.h"
+#include "Leb128.h"
 
 
 using namespace std;
@@ -18,8 +19,35 @@ typedef int16_t   s2;
 typedef int32_t   s4;
 typedef int64_t   s8;
 
-typedef u1* uleb128;
-typedef u1* uleb128p1;
+//typedef u1* uleb128;
+//typedef u1* uleb128p1;
+
+struct uleb128
+{
+    u4 value;
+    u1* data;
+    u4 length;
+};
+
+struct uleb128p1
+{
+    u4 value;
+    u1* data;
+    u4 length;
+};
+
+void parse_uleb128(/* u1[5] */u1* leb128_buffer, uleb128 *p)
+{
+    const u1* p1 = leb128_buffer;
+    const u1** data = &p1;
+
+    u4 size = Leb128::decode_unsigned_leb128(data);
+    u4 length = Leb128::unsigned_leb128_size(size);
+
+    p->value = size;
+    p->data = leb128_buffer;
+    p->length = length;
+}
 
 // 字节序标记常量。
 enum
@@ -441,6 +469,32 @@ struct encoded_field
      */
     uleb128 access_flags;
 };
+
+void parse_encoded_field(FILE *dex_file, int offset, encoded_field * p)
+{
+    if(0 != fseek(dex_file, offset, 0))
+    {
+        printf("seek file error.\n");
+        return;
+    }
+
+    // parse field_idx_diff.
+    u1 *uleb128_buff = new u1[5];
+
+    p->field_idx_diff = {};
+    parse_uleb128(uleb128_buff, &(p->field_idx_diff));
+
+    if (0 != fseek(dex_file, offset + p->field_idx_diff.length, 0))
+    {
+        printf("seek file error.\n");
+        return;
+    }
+
+    // parse access_flags.
+    uleb128_buff = new u1[5];
+    p->access_flags = {};
+    parse_uleb128(uleb128_buff, &(p->access_flags));
+}
 
 struct encoded_method
 {
