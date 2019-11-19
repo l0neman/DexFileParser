@@ -470,32 +470,6 @@ struct encoded_field
     uleb128 access_flags;
 };
 
-void parse_encoded_field(FILE *dex_file, int offset, encoded_field * p)
-{
-    if(0 != fseek(dex_file, offset, 0))
-    {
-        printf("seek file error.\n");
-        return;
-    }
-
-    // parse field_idx_diff.
-    u1 *uleb128_buff = new u1[5];
-
-    p->field_idx_diff = {};
-    parse_uleb128(uleb128_buff, &(p->field_idx_diff));
-
-    if (0 != fseek(dex_file, offset + p->field_idx_diff.length, 0))
-    {
-        printf("seek file error.\n");
-        return;
-    }
-
-    // parse access_flags.
-    uleb128_buff = new u1[5];
-    p->access_flags = {};
-    parse_uleb128(uleb128_buff, &(p->access_flags));
-}
-
 struct encoded_method
 {
     /*
