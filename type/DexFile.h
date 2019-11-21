@@ -36,7 +36,7 @@ struct uleb128p1
     u4 length;
 };
 
-void parse_uleb128(/* u1[5] */u1* leb128_buffer, uleb128 *p)
+inline void parse_uleb128(/* u1[5] */u1* leb128_buffer, uleb128 *p)
 {
     const u1* p1 = leb128_buffer;
     const u1** data = &p1;

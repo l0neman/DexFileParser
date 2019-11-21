@@ -123,9 +123,9 @@ void DexParser::parse_string_list(const u4 size, const u4 offset)
         }
 
         // leb 为 1~5 byte，那么为了解析它，给予 5 byte 的缓冲。
-        u1 *leb128_buffer = new u1[5];
+        u1 *leb128_buffer = new u1[5]{0};
 
-        if (0 == fread(&leb128_buffer, sizeof(u1), 5, this->dex_file_))
+        if (0 == fread(leb128_buffer, sizeof(u1), 5, this->dex_file_))
         {
             printf("read file error.");
             return;
@@ -404,7 +404,7 @@ void DexParser::parse_encoded_method(const int offset, encoded_method* p) const
 
     u1* uleb128_buff = new u1[5];
 
-    if (0 == fread(&uleb128_buff, sizeof(u1), 5, this->dex_file_))
+    if (0 == fread(uleb128_buff, sizeof(u1), 5, this->dex_file_))
     {
         printf("read file error.");
         return;
@@ -422,7 +422,7 @@ void DexParser::parse_encoded_method(const int offset, encoded_method* p) const
 
     uleb128_buff = new u1[5];
 
-    if (0 == fread(&uleb128_buff, sizeof(u1), 5, this->dex_file_))
+    if (0 == fread(uleb128_buff, sizeof(u1), 5, this->dex_file_))
     {
         printf("read file error.");
         return;
@@ -440,7 +440,7 @@ void DexParser::parse_encoded_method(const int offset, encoded_method* p) const
 
     uleb128_buff = new u1[5];
 
-    if (0 == fread(&uleb128_buff, sizeof(u1), 5, this->dex_file_))
+    if (0 == fread(uleb128_buff, sizeof(u1), 5, this->dex_file_))
     {
         printf("read file error.");
         return;
@@ -470,7 +470,7 @@ void DexParser::parse_class_data_list(const u4 size, const u4 offset) const
         // parse static_fields_size.
         u1 *leb128_buffer = new u1[5];
 
-        if (0 == fread(&leb128_buffer, sizeof(u1), 5, this->dex_file_))
+        if (0 == fread(leb128_buffer, sizeof(u1), 5, this->dex_file_))
         {
             printf("read file error.");
             return;
@@ -486,13 +486,13 @@ void DexParser::parse_class_data_list(const u4 size, const u4 offset) const
         // parse instance_field_size.
         leb128_buffer = new u1[5];
 
-        if (0 != fseek(this->dex_file_, seek_add, 0))
+        if (0 != fseek(this->dex_file_, offset + seek_add, 0))
         {
             printf("seek file error.\n");
             return;
         }
 
-        if (0 == fread(&leb128_buffer, sizeof(u1), 5, this->dex_file_))
+        if (0 == fread(leb128_buffer, sizeof(u1), 5, this->dex_file_))
         {
             printf("read file error.");
             return;
@@ -506,13 +506,13 @@ void DexParser::parse_class_data_list(const u4 size, const u4 offset) const
         // parse direct_methods_size.
         leb128_buffer = new u1[5];
 
-        if (0 != fseek(this->dex_file_, seek_add, 0))
+        if (0 != fseek(this->dex_file_, offset + seek_add, 0))
         {
             printf("seek file error.\n");
             return;
         }
 
-        if (0 == fread(&leb128_buffer, sizeof(u1), 5, this->dex_file_))
+        if (0 == fread(leb128_buffer, sizeof(u1), 5, this->dex_file_))
         {
             printf("read file error.");
             return;
@@ -526,13 +526,13 @@ void DexParser::parse_class_data_list(const u4 size, const u4 offset) const
         // parse virtual_methods_size.
         leb128_buffer = new u1[5];
 
-        if (0 != fseek(this->dex_file_, seek_add, 0))
+        if (0 != fseek(this->dex_file_, offset + seek_add, 0))
         {
             printf("seek file error.\n");
             return;
         }
 
-        if (0 == fread(&leb128_buffer, sizeof(u1), 5, this->dex_file_))
+        if (0 == fread(leb128_buffer, sizeof(u1), 5, this->dex_file_))
         {
             printf("read file error.");
             return;
@@ -547,7 +547,7 @@ void DexParser::parse_class_data_list(const u4 size, const u4 offset) const
         item.static_fields = new encoded_field[item.static_fields_size.value];
         for (u4 i = 0; i < item.static_fields_size.value; i++)
         {
-            parse_encoded_field(seek_add, &item.static_fields[i]);
+            parse_encoded_field(offset + seek_add, &item.static_fields[i]);
             seek_add += item.static_fields[i].field_idx_diff.length + 
                 item.static_fields[i].access_flags.length;
         }
@@ -556,7 +556,7 @@ void DexParser::parse_class_data_list(const u4 size, const u4 offset) const
         item.instance_fields = new encoded_field[item.instance_fields_size.value];
         for (u4 i = 0; i < item.instance_fields_size.value; i++)
         {
-            parse_encoded_field(seek_add, &item.instance_fields[i]);
+            parse_encoded_field(offset + seek_add, &item.instance_fields[i]);
             seek_add += item.instance_fields[i].field_idx_diff.length +
                 item.instance_fields[i].access_flags.length;
         }
@@ -565,7 +565,7 @@ void DexParser::parse_class_data_list(const u4 size, const u4 offset) const
         item.direct_methods = new encoded_method[item.direct_methods_size.value];
         for (u4 i = 0; i < item.direct_methods_size.value; i++)
         {
-            parse_encoded_method(seek_add, &item.direct_methods[i]);
+            parse_encoded_method(offset + seek_add, &item.direct_methods[i]);
             seek_add += item.direct_methods[i].method_idx_diff.length +
                 item.direct_methods[i].access_flags.length + 
                 item.direct_methods[i].code_off.length;
@@ -575,70 +575,70 @@ void DexParser::parse_class_data_list(const u4 size, const u4 offset) const
         item.virtual_methods = new encoded_method[item.virtual_methods_size.value];
         for (u4 i = 0; i < item.virtual_methods_size.value; i++)
         {
-            parse_encoded_method(seek_add, &item.virtual_methods[i]);
+            parse_encoded_method(offset + seek_add, &item.virtual_methods[i]);
             seek_add += item.virtual_methods[i].method_idx_diff.length +
                 item.virtual_methods[i].access_flags.length +
                 item.virtual_methods[i].code_off.length;
         }
     }
 
-    // delete class_data_list items.
-    for (u4 i = 0; i < size; i++)
-    {
-       delete[] class_data_list[i].static_fields_size.data;
-       class_data_list[i].static_fields_size.data = nullptr;
+    //// delete class_data_list items.
+    //for (u4 i = 0; i < size; i++)
+    //{
+    //   delete[] class_data_list[i].static_fields_size.data;
+    //   class_data_list[i].static_fields_size.data = nullptr;
 
-       delete[] class_data_list[i].instance_fields_size.data;
-       class_data_list[i].static_fields_size.data = nullptr;
+    //   delete[] class_data_list[i].instance_fields_size.data;
+    //   class_data_list[i].static_fields_size.data = nullptr;
 
-       delete[] class_data_list[i].direct_methods_size.data;
-       class_data_list[i].static_fields_size.data = nullptr;
+    //   delete[] class_data_list[i].direct_methods_size.data;
+    //   class_data_list[i].static_fields_size.data = nullptr;
 
-       delete[] class_data_list[i].virtual_methods_size.data;
-       class_data_list[i].virtual_methods_size.data = nullptr;
+    //   delete[] class_data_list[i].virtual_methods_size.data;
+    //   class_data_list[i].virtual_methods_size.data = nullptr;
 
-       for(u4 i = 0; i < class_data_list[i].static_fields_size.value; i++)
-       {
-           delete[] class_data_list[i].static_fields[i].field_idx_diff.data;
-           class_data_list[i].static_fields[i].field_idx_diff.data = nullptr;
+    //   for(u4 i = 0; i < class_data_list[i].static_fields_size.value; i++)
+    //   {
+    //       delete[] class_data_list[i].static_fields[i].field_idx_diff.data;
+    //       class_data_list[i].static_fields[i].field_idx_diff.data = nullptr;
 
-           delete[] class_data_list[i].static_fields[i].access_flags.data;
-           class_data_list[i].static_fields[i].access_flags.data = nullptr;
-       }
+    //       delete[] class_data_list[i].static_fields[i].access_flags.data;
+    //       class_data_list[i].static_fields[i].access_flags.data = nullptr;
+    //   }
 
-       for (u4 i = 0; i < class_data_list[i].instance_fields_size.value; i++)
-       {
-           delete[] class_data_list[i].instance_fields[i].field_idx_diff.data;
-           class_data_list[i].instance_fields[i].field_idx_diff.data = nullptr;
+    //   for (u4 i = 0; i < class_data_list[i].instance_fields_size.value; i++)
+    //   {
+    //       delete[] class_data_list[i].instance_fields[i].field_idx_diff.data;
+    //       class_data_list[i].instance_fields[i].field_idx_diff.data = nullptr;
 
-           delete[] class_data_list[i].instance_fields[i].access_flags.data;
-           class_data_list[i].instance_fields[i].access_flags.data = nullptr;
-       }
+    //       delete[] class_data_list[i].instance_fields[i].access_flags.data;
+    //       class_data_list[i].instance_fields[i].access_flags.data = nullptr;
+    //   }
 
-       for (u4 i = 0; i < class_data_list[i].direct_methods_size.value; i++)
-       {
-           delete[] class_data_list[i].direct_methods[i].method_idx_diff.data;
-           class_data_list[i].direct_methods[i].method_idx_diff.data = nullptr;
+    //   for (u4 i = 0; i < class_data_list[i].direct_methods_size.value; i++)
+    //   {
+    //       delete[] class_data_list[i].direct_methods[i].method_idx_diff.data;
+    //       class_data_list[i].direct_methods[i].method_idx_diff.data = nullptr;
 
-           delete[] class_data_list[i].direct_methods[i].access_flags.data;
-           class_data_list[i].direct_methods[i].access_flags.data = nullptr;
+    //       delete[] class_data_list[i].direct_methods[i].access_flags.data;
+    //       class_data_list[i].direct_methods[i].access_flags.data = nullptr;
 
-           delete[] class_data_list[i].direct_methods[i].code_off.data;
-           class_data_list[i].direct_methods[i].code_off.data = nullptr;
-       }
+    //       delete[] class_data_list[i].direct_methods[i].code_off.data;
+    //       class_data_list[i].direct_methods[i].code_off.data = nullptr;
+    //   }
 
-       for (u4 i = 0; i < class_data_list[i].virtual_methods_size.value; i++)
-       {
-           delete[] class_data_list[i].virtual_methods[i].method_idx_diff.data;
-           class_data_list[i].virtual_methods[i].method_idx_diff.data = nullptr;
+    //   for (u4 i = 0; i < class_data_list[i].virtual_methods_size.value; i++)
+    //   {
+    //       delete[] class_data_list[i].virtual_methods[i].method_idx_diff.data;
+    //       class_data_list[i].virtual_methods[i].method_idx_diff.data = nullptr;
 
-           delete[] class_data_list[i].virtual_methods[i].access_flags.data;
-           class_data_list[i].virtual_methods[i].access_flags.data = nullptr;
+    //       delete[] class_data_list[i].virtual_methods[i].access_flags.data;
+    //       class_data_list[i].virtual_methods[i].access_flags.data = nullptr;
 
-           delete[] class_data_list[i].virtual_methods[i].code_off.data;
-           class_data_list[i].virtual_methods[i].code_off.data = nullptr;
-       }
-    }
+    //       delete[] class_data_list[i].virtual_methods[i].code_off.data;
+    //       class_data_list[i].virtual_methods[i].code_off.data = nullptr;
+    //   }
+    //}
 
     delete[] class_data_list;
     class_data_list = nullptr;

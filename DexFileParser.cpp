@@ -1,6 +1,11 @@
 ﻿#include <iostream>
 #include "DexParser.h"
 
+long uint_to_long(unsigned int a)
+{
+    return 0L;
+}
+
 int main()
 {
     std::cout << "Hello World!" << std::endl;
