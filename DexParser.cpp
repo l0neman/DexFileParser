@@ -139,7 +139,7 @@ void DexParser::parse_string_list(const u4 size, const u4 offset)
 
         // reset struct.
         this->string_list_[i].data = nullptr;
-        this->string_list_[i].utf16_size = {0, nullptr, 0};
+        this->string_list_[i].utf16_size = nullptr;
 
 #ifdef _STRING_INFO_PRINT_
         printf("leb128 length: %d\n", length);
@@ -169,7 +169,7 @@ void DexParser::parse_string_list(const u4 size, const u4 offset)
 
         str_buf[str_size - 1] = '\0';
 
-        this->string_list_[i].utf16_size = { 0, nullptr, 0 };
+        this->string_list_[i].utf16_size = nullptr;
         this->string_list_[i].data = reinterpret_cast<u1*>(str_buf);
 
 #ifdef _STRING_INFO_PRINT_
@@ -378,10 +378,10 @@ void DexParser::parse_encoded_field(const int offset, encoded_field* p) const
     }
 
 
-    p->field_idx_diff = {};
-    parse_uleb128(uleb128_buff, &(p->field_idx_diff));
+    p->field_idx_diff = new uleb128;
+    parse_uleb128(uleb128_buff, p->field_idx_diff);
 
-    if (0 != fseek(this->dex_file_, offset + p->field_idx_diff.length, 0))
+    if (0 != fseek(this->dex_file_, offset + p->field_idx_diff->length, 0))
     {
         printf("seek file error.\n");
         return;
@@ -389,67 +389,72 @@ void DexParser::parse_encoded_field(const int offset, encoded_field* p) const
 
     // parse access_flags.
     uleb128_buff = new u1[5];
-    p->access_flags = {};
-    parse_uleb128(uleb128_buff, &(p->access_flags));
+    p->access_flags = new uleb128;
+    parse_uleb128(uleb128_buff, p->access_flags);
 }
 
 void DexParser::parse_encoded_method(const int offset, encoded_method* p) const
 {
     // parse method_idx_diff.
-    if (0 != fseek(this->dex_file_, offset, 0))
     {
-        printf("seek file error.\n");
-        return;
+        if (0 != fseek(this->dex_file_, offset, 0))
+        {
+            printf("seek file error 1.\n");
+            return;
+        }
+
+        u1* uleb128_buff = new u1[5];
+
+        if (0 == fread(uleb128_buff, sizeof(u1), 5, this->dex_file_))
+        {
+            printf("read file error 2.\n");
+            return;
+        }
+
+        p->method_idx_diff = new uleb128;
+        parse_uleb128(uleb128_buff, p->method_idx_diff);
     }
-
-    u1* uleb128_buff = new u1[5];
-
-    if (0 == fread(uleb128_buff, sizeof(u1), 5, this->dex_file_))
-    {
-        printf("read file error.\n");
-        return;
-    }
-
-    p->method_idx_diff = {};
-    parse_uleb128(uleb128_buff, &(p->method_idx_diff));
 
     // parse access_flags.
-    if (0 != fseek(this->dex_file_, offset + p->method_idx_diff.length, 0))
     {
-        printf("seek file error.\n");
-        return;
+        if (0 != fseek(this->dex_file_, offset + p->method_idx_diff->length, 0))
+        {
+            printf("seek file error.\n");
+            return;
+        }
+
+        u1* uleb128_buff = new u1[5];
+
+        if (0 == fread(uleb128_buff, sizeof(u1), 5, this->dex_file_))
+        {
+            printf("read file error.\n");
+            return;
+        }
+
+        p->access_flags = new uleb128;
+        parse_uleb128(uleb128_buff, p->access_flags);
     }
-
-    uleb128_buff = new u1[5];
-
-    if (0 == fread(uleb128_buff, sizeof(u1), 5, this->dex_file_))
-    {
-        printf("read file error.\n");
-        return;
-    }
-
-    p->access_flags = {};
-    parse_uleb128(uleb128_buff, &(p->access_flags));
 
     // parse code_off.
-    if (0 != fseek(this->dex_file_, offset + p->access_flags.length, 0))
     {
-        printf("seek file error.\n");
-        return;
+        if (0 != fseek(this->dex_file_, offset + p->access_flags->length, 0))
+        {
+            printf("seek file error.\n");
+            return;
+        }
+
+        u1* uleb128_buff = new u1[5];
+
+        if (0 == fread(uleb128_buff, sizeof(u1), 5, this->dex_file_))
+        {
+            printf("read file error.\n");
+            return;
+        }
+
+        p->code_off = new uleb128;
+        parse_uleb128(uleb128_buff, p->code_off);
     }
-
-    uleb128_buff = new u1[5];
-
-    if (0 == fread(uleb128_buff, sizeof(u1), 5, this->dex_file_))
-    {
-        printf("read file error.\n");
-        return;
-    }
-
-    p->code_off = {};
-    parse_uleb128(uleb128_buff, &(p->code_off));
 }
-
 
 void DexParser::parse_class_data_list(const u4 size, const u4 offset) const
 {
@@ -480,10 +485,10 @@ void DexParser::parse_class_data_list(const u4 size, const u4 offset) const
                 return;
             }
 
-            item->static_fields_size = {};
-            parse_uleb128(leb128_buffer, &item->static_fields_size);
-            printf("static fields size: %d\n", item->static_fields_size.value);
-            seek_add += item->static_fields_size.length;
+            item->static_fields_size = new uleb128;
+            parse_uleb128(leb128_buffer, item->static_fields_size);
+            printf("static fields size: %d\n", item->static_fields_size->value);
+            seek_add += item->static_fields_size->length;
         }
 
         // parse instance_field_size.
@@ -502,10 +507,10 @@ void DexParser::parse_class_data_list(const u4 size, const u4 offset) const
                 return;
             }
 
-            item->instance_fields_size = {};
-            parse_uleb128(leb128_buffer, &item->instance_fields_size);
-            printf("instance fields size: %d\n", item->instance_fields_size.value);
-            seek_add += item->instance_fields_size.length;
+            item->instance_fields_size = new uleb128;
+            parse_uleb128(leb128_buffer, item->instance_fields_size);
+            printf("instance fields size: %d\n", item->instance_fields_size->value);
+            seek_add += item->instance_fields_size->length;
         }
 
         // parse direct_methods_size.
@@ -524,10 +529,10 @@ void DexParser::parse_class_data_list(const u4 size, const u4 offset) const
                 return;
             }
 
-            item->direct_methods_size = {};
-            parse_uleb128(leb128_buffer, &item->direct_methods_size);
-            printf("direct methods size: %d\n", item->direct_methods_size.value);
-            seek_add += item->direct_methods_size.length;
+            item->direct_methods_size = new uleb128;
+            parse_uleb128(leb128_buffer, item->direct_methods_size);
+            printf("direct methods size: %d\n", item->direct_methods_size->value);
+            seek_add += item->direct_methods_size->length;
         }
 
         // parse virtual_methods_size.
@@ -546,110 +551,115 @@ void DexParser::parse_class_data_list(const u4 size, const u4 offset) const
                 return;
             }
 
-            item->virtual_methods_size = {};
-            parse_uleb128(leb128_buffer, &item->virtual_methods_size);
-            printf("virtual methods size: %d\n", item->virtual_methods_size.value);
-            seek_add += item->virtual_methods_size.length;
+            item->virtual_methods_size = new uleb128;
+            parse_uleb128(leb128_buffer, item->virtual_methods_size);
+            printf("virtual methods size: %d\n", item->virtual_methods_size->value);
+            seek_add += item->virtual_methods_size->length;
         }
-
-        printf("parse static_fields.\n");
 
         // parse static_fields.
-        item->static_fields = new encoded_field[item->static_fields_size.value];
-        for (u4 i = 0; i < item->static_fields_size.value; i++)
+        item->static_fields = new encoded_field[item->static_fields_size->value];
+        for (u4 j = 0; j < item->static_fields_size->value; j++)
         {
-            parse_encoded_field(offset + seek_add, &item->static_fields[i]);
-            seek_add += item->static_fields[i].field_idx_diff.length + 
-                item->static_fields[i].access_flags.length;
+            parse_encoded_field(offset + seek_add, &item->static_fields[j]);
+            seek_add += item->static_fields[j].field_idx_diff->length +
+                item->static_fields[j].access_flags->length;
         }
 
+
         // parse instance_fields.
-        item->instance_fields = new encoded_field[item->instance_fields_size.value];
-        for (u4 i = 0; i < item->instance_fields_size.value; i++)
+        item->instance_fields = new encoded_field[item->instance_fields_size->value];
+        for (u4 j = 0; j < item->instance_fields_size->value; j++)
         {
-            parse_encoded_field(offset + seek_add, &item->instance_fields[i]);
-            seek_add += item->instance_fields[i].field_idx_diff.length +
-                item->instance_fields[i].access_flags.length;
+            parse_encoded_field(offset + seek_add, &item->instance_fields[j]);
+            seek_add += item->instance_fields[j].field_idx_diff->length +
+                item->instance_fields[j].access_flags->length;
         }
 
         // parse direct_methods.
-        item->direct_methods = new encoded_method[item->direct_methods_size.value];
-        for (u4 i = 0; i < item->direct_methods_size.value; i++)
+        item->direct_methods = new encoded_method[item->direct_methods_size->value];
+        for (u4 j = 0; j < item->direct_methods_size->value; j++)
         {
-            parse_encoded_method(offset + seek_add, &item->direct_methods[i]);
-            seek_add += item->direct_methods[i].method_idx_diff.length +
-                item->direct_methods[i].access_flags.length + 
-                item->direct_methods[i].code_off.length;
+            parse_encoded_method(offset + seek_add, &item->direct_methods[j]);
+            seek_add += item->direct_methods[j].method_idx_diff->length +
+                item->direct_methods[j].access_flags->length +
+                item->direct_methods[j].code_off->length;
         }
 
+        printf("parse virtual_methods.\n");
+
         // parse virtual_methods.
-        item->virtual_methods = new encoded_method[item->virtual_methods_size.value];
-        for (u4 i = 0; i < item->virtual_methods_size.value; i++)
+        item->virtual_methods = new encoded_method[item->virtual_methods_size->value];
+        for (u4 j = 0; j < item->virtual_methods_size->value; j++)
         {
-            parse_encoded_method(offset + seek_add, &item->virtual_methods[i]);
-            seek_add += item->virtual_methods[i].method_idx_diff.length +
-                item->virtual_methods[i].access_flags.length +
-                item->virtual_methods[i].code_off.length;
+            parse_encoded_method(offset + seek_add, &item->virtual_methods[j]);
+            
+            seek_add += item->virtual_methods[j].method_idx_diff->length +
+                item->virtual_methods[j].access_flags->length +
+                item->virtual_methods[j].code_off->length;
         }
     }
 
     // delete class_data_list items.
-    for (u4 i = 0; i < size; i++)
+    // TODO: delete. 
+    /*for (u4 i = 0; i < size; i++)
     {
-       delete[] class_data_list[i].static_fields_size.data;
-       class_data_list[i].static_fields_size.data = nullptr;
+        if (class_data_list[i].static_fields_size != nullptr) {
+            delete[] class_data_list[i].static_fields_size->data;
+            class_data_list[i].static_fields_size->data = nullptr;
+        }
 
-       delete[] class_data_list[i].instance_fields_size.data;
-       class_data_list[i].instance_fields_size.data = nullptr;
+       delete[] class_data_list[i].instance_fields_size->data;
+       class_data_list[i].instance_fields_size->data = nullptr;
 
-       delete[] class_data_list[i].direct_methods_size.data;
-       class_data_list[i].direct_methods_size.data = nullptr;
+       delete[] class_data_list[i].direct_methods_size->data;
+       class_data_list[i].direct_methods_size->data = nullptr;
 
-       delete[] class_data_list[i].virtual_methods_size.data;
-       class_data_list[i].virtual_methods_size.data = nullptr;
+       delete[] class_data_list[i].virtual_methods_size->data;
+       class_data_list[i].virtual_methods_size->data = nullptr;
 
-       for(u4 j = 0; j < class_data_list[i].static_fields_size.value; j++)
+       for(u4 j = 0; j < class_data_list[i].static_fields_size->value; j++)
        {
-           delete[] class_data_list[i].static_fields[j].field_idx_diff.data;
-           class_data_list[i].static_fields[j].field_idx_diff.data = nullptr;
+           delete[] class_data_list[i].static_fields[j].field_idx_diff->data;
+           class_data_list[i].static_fields[j].field_idx_diff->data = nullptr;
 
-           delete[] class_data_list[i].static_fields[j].access_flags.data;
-           class_data_list[i].static_fields[j].access_flags.data = nullptr;
+           delete[] class_data_list[i].static_fields[j].access_flags->data;
+           class_data_list[i].static_fields[j].access_flags->data = nullptr;
        }
 
-       for (u4 j = 0; j < class_data_list[i].instance_fields_size.value; j++)
+       for (u4 j = 0; j < class_data_list[i].instance_fields_size->value; j++)
        {
-           delete[] class_data_list[i].instance_fields[j].field_idx_diff.data;
-           class_data_list[i].instance_fields[j].field_idx_diff.data = nullptr;
+           delete[] class_data_list[i].instance_fields[j].field_idx_diff->data;
+           class_data_list[i].instance_fields[j].field_idx_diff->data = nullptr;
 
-           delete[] class_data_list[i].instance_fields[j].access_flags.data;
-           class_data_list[i].instance_fields[j].access_flags.data = nullptr;
+           delete[] class_data_list[i].instance_fields[j].access_flags->data;
+           class_data_list[i].instance_fields[j].access_flags->data = nullptr;
        }
 
-       for (u4 j = 0; j < class_data_list[i].direct_methods_size.value; j++)
+       for (u4 j = 0; j < class_data_list[i].direct_methods_size->value; j++)
        {
-           delete[] class_data_list[i].direct_methods[j].method_idx_diff.data;
-           class_data_list[i].direct_methods[j].method_idx_diff.data = nullptr;
+           delete[] class_data_list[i].direct_methods[j].method_idx_diff->data;
+           class_data_list[i].direct_methods[j].method_idx_diff->data = nullptr;
 
-           delete[] class_data_list[i].direct_methods[j].access_flags.data;
-           class_data_list[i].direct_methods[j].access_flags.data = nullptr;
+           delete[] class_data_list[i].direct_methods[j].access_flags->data;
+           class_data_list[i].direct_methods[j].access_flags->data = nullptr;
 
-           delete[] class_data_list[i].direct_methods[j].code_off.data;
-           class_data_list[i].direct_methods[j].code_off.data = nullptr;
+           delete[] class_data_list[i].direct_methods[j].code_off->data;
+           class_data_list[i].direct_methods[j].code_off->data = nullptr;
        }
 
-       for (u4 j = 0; j < class_data_list[i].virtual_methods_size.value; j++)
+       for (u4 j = 0; j < class_data_list[i].virtual_methods_size->value; j++)
        {
-           delete[] class_data_list[i].virtual_methods[j].method_idx_diff.data;
-           class_data_list[i].virtual_methods[j].method_idx_diff.data = nullptr;
+           delete[] class_data_list[i].virtual_methods[j].method_idx_diff->data;
+           class_data_list[i].virtual_methods[j].method_idx_diff->data = nullptr;
 
-           delete[] class_data_list[i].virtual_methods[j].access_flags.data;
-           class_data_list[i].virtual_methods[j].access_flags.data = nullptr;
+           delete[] class_data_list[i].virtual_methods[j].access_flags->data;
+           class_data_list[i].virtual_methods[j].access_flags->data = nullptr;
 
-           delete[] class_data_list[i].virtual_methods[j].code_off.data;
-           class_data_list[i].virtual_methods[j].code_off.data = nullptr;
+           delete[] class_data_list[i].virtual_methods[j].code_off->data;
+           class_data_list[i].virtual_methods[j].code_off->data = nullptr;
        }
-    }
+    }*/
 
     delete[] class_data_list;
     class_data_list = nullptr;
@@ -787,8 +797,8 @@ DexParser::~DexParser()
             delete[] this->string_list_[i].data;
             this->string_list_[i].data = nullptr;
 
-            delete[] this->string_list_[i].utf16_size.data;
-            this->string_list_[i].utf16_size.data = nullptr;
+            delete[] this->string_list_[i].utf16_size->data;
+            this->string_list_[i].utf16_size->data = nullptr;
         }
 
         delete[] this->string_list_;

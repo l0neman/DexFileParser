@@ -330,7 +330,7 @@ struct string_data_item
       此字符串的大小；以 UTF-16 代码单元（在许多系统中为“字符串长度”）为单位。
       也就是说，这是该字符串的解码长度（编码长度隐含在 0 字节的位置）。
      */
-    uleb128 utf16_size;
+    uleb128* utf16_size;
     /*
       一系列 MUTF-8 代码单元（又称八位字节），后跟一个值为 0 的字节。
      */
@@ -463,11 +463,11 @@ struct encoded_field
       此字段标识（包括名称和描述符）的 field_ids 列表中的索引；
       它会表示为与列表中前一个元素的索引之间的差值。列表中第一个元素的索引则直接表示出来。
      */
-    uleb128 field_idx_diff;
+    uleb128* field_idx_diff;
     /*
       字段的访问标记（public、final 等）。
      */
-    uleb128 access_flags;
+    uleb128* access_flags;
 };
 
 struct encoded_method
@@ -476,28 +476,28 @@ struct encoded_method
       此方法标识（包括名称和描述符）的 method_ids 列表中的索引；
       它会表示为与列表中前一个元素的索引之间的差值。列表中第一个元素的索引则直接表示出来。
      */
-    uleb128 method_idx_diff;
+    uleb128* method_idx_diff;
     /*
       方法的访问标记（public、final 等）。
      */
-    uleb128 access_flags;
+    uleb128* access_flags;
     /*
       从文件开头到此方法代码结构的偏移量；如果此方法是 abstract 或 native，则该值为 0。
       该偏移量应该是到 data 区段中某个位置的偏移量。数据格式由下文的“code_item”指定。
      */
-    uleb128 code_off;
+    uleb128* code_off;
 };
 
 struct class_data_item
 {
     /* 此项中定义的静态字段的数量 */
-    uleb128 static_fields_size;
+    uleb128* static_fields_size;
     /* 此项中定义的实例字段的数量 */
-    uleb128 instance_fields_size;
+    uleb128* instance_fields_size;
     /* 此项中定义的直接方法的数量 */
-    uleb128 direct_methods_size;
+    uleb128* direct_methods_size;
     /* 此项中定义的虚拟方法的数量 */
-    uleb128 virtual_methods_size;
+    uleb128* virtual_methods_size;
     /*
       定义的静态字段；以一系列编码元素的形式表示。这些字段必须按 field_idx 以升序进行排序。
      */
@@ -549,12 +549,12 @@ struct debug_info_item
     /*
       状态机的 line 寄存器的初始值。不表示实际的位置条目。
      */
-    uleb128 line_start;
+    uleb128* line_start;
     /*
       已编码的参数名称的数量。每个方法参数都应该有一个名称，但不包括实例方法的 this
      （如果有）。
      */
-    uleb128 parameters_size;
+    uleb128* parameters_size;
     /*
       方法参数名称的字符串索引。NO_INDEX 的编码值表示该关联参数没有可用的名称。
       该类型描述符和签名隐含在方法描述符和签名中。
@@ -625,7 +625,7 @@ struct annotations_directory_item
 
 struct DexFile
 {
-    header_item header;
+    header_item* header;
 
 };
 
