@@ -32,19 +32,20 @@ void DexParser::parse_map_list()
     }
 
     // parse map list size.
-    this->map_list_.size = 0;
-    if (0 == fread(&this->map_list_.size, sizeof(int), 1, dex_file_))
+    u4 t_size = 0;
+    if (0 == fread(&t_size, sizeof(int), 1, dex_file_))
     {
         printf("read file error.\n");
         return;
     }
 
-    if(this->map_list_.size == 0)
+    if(t_size == 0)
     {
         printf("map_list.size error.\n");
         return;
     }
 
+    this->map_list_ = map_list(t_size);
     printf("map list size: %u\n", this->map_list_.size);
 
     // move to next map item offset.
@@ -54,14 +55,10 @@ void DexParser::parse_map_list()
         return;
     }
 
-    if (this->map_list_.size <= 0)
-        return;
-
     this->map_list_.list = new map_item[this->map_list_.size];
-    this->map_list_.list_ = make_unique<map_item[]>(this->map_list_.size);
 
-    if (0 == fread(this->map_list_.list, sizeof(map_item), 
-        this->map_list_.size, dex_file_))
+    const size_t size = this->map_list_.size;
+    if (0 == fread(this->map_list_.list, sizeof(map_item), size, dex_file_))
     {
         printf("read map_list.list error.\n");
         return;
@@ -123,7 +120,8 @@ void DexParser::parse_string_list(const u4 size, const u4 offset)
         }
 
         // leb 为 1~5 byte，那么为了解析它，给予 5 byte 的缓冲。
-        u1 *leb128_buffer = new u1[5]{0};
+        u1 *leb128_buffer = new u1[5];
+        memset(leb128_buffer, 0, 5);
 
         if (0 == fread(leb128_buffer, sizeof(u1), 5, this->dex_file_))
         {
@@ -138,17 +136,13 @@ void DexParser::parse_string_list(const u4 size, const u4 offset)
         const u4 length = Leb128::unsigned_leb128_size(size);
 
         // reset struct.
-        this->string_list_[i].data = nullptr;
-        this->string_list_[i].utf16_size = nullptr;
+        this->string_list_[i] = string_data_item();
 
 #ifdef _STRING_INFO_PRINT_
         printf("leb128 length: %d\n", length);
         printf("string size: %d\n", size);
 #endif
-        if (size == 0)
-        {
-            continue;
-        }
+        if (size == 0) continue;
 
         // 最后一个留给 '\0' 用。
         const u4 str_size = size + 1;
@@ -360,7 +354,6 @@ void DexParser::parse_class_defs(const u4 size, const u4 offset) const
     }
 #endif
 
-
     delete[] class_def_list;
     class_def_list = nullptr;
 }
@@ -404,6 +397,7 @@ void DexParser::parse_encoded_method(const int offset, encoded_method* p) const
         }
 
         u1* uleb128_buff = new u1[5];
+        memset(uleb128_buff, 0, 5);
 
         if (0 == fread(uleb128_buff, sizeof(u1), 5, this->dex_file_))
         {
@@ -424,6 +418,7 @@ void DexParser::parse_encoded_method(const int offset, encoded_method* p) const
         }
 
         u1* uleb128_buff = new u1[5];
+        memset(uleb128_buff, 0, 5);
 
         if (0 == fread(uleb128_buff, sizeof(u1), 5, this->dex_file_))
         {
@@ -444,6 +439,7 @@ void DexParser::parse_encoded_method(const int offset, encoded_method* p) const
         }
 
         u1* uleb128_buff = new u1[5];
+        memset(uleb128_buff, 0, 5);
 
         if (0 == fread(uleb128_buff, sizeof(u1), 5, this->dex_file_))
         {
@@ -782,25 +778,9 @@ DexParser::~DexParser()
         this->string_ids_ = nullptr;
     }
 
-    // delete map list.
-    if (nullptr != this->map_list_.list)
-    {
-        delete[] this->map_list_.list;
-        this->map_list_.list = nullptr;
-    }
-
     // delete string list.
     if (nullptr != this->string_list_)
     {
-        for (u4 i = 0; i < this->string_list_size_; i++)
-        {
-            delete[] this->string_list_[i].data;
-            this->string_list_[i].data = nullptr;
-
-            delete[] this->string_list_[i].utf16_size->data;
-            this->string_list_[i].utf16_size->data = nullptr;
-        }
-
         delete[] this->string_list_;
         this->string_list_ = nullptr;
     }

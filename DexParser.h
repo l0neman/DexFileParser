@@ -32,7 +32,7 @@ private:
     // 文件头。
     header_item dex_header_{};
     // 类型映射表。
-    map_list map_list_{};
+    map_list map_list_;
     // 字符串偏移信息。
     string_id_item* string_ids_;
     // 字符串数量。

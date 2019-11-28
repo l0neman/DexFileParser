@@ -24,6 +24,19 @@ typedef int64_t   s8;
 
 struct uleb128
 {
+    uleb128() 
+    { 
+        this->value = 0;
+        this->length = 0;
+        this->data = nullptr; 
+    }
+
+    ~uleb128() 
+    {
+        delete this->data;
+        this->data = nullptr;
+    }
+
     u4 value;
     u1* data;
     u4 length;
@@ -31,6 +44,19 @@ struct uleb128
 
 struct uleb128p1
 {
+    uleb128p1()
+    {
+        this->value = 0;
+        this->length = 0;
+        this->data = nullptr;
+    }
+
+    ~uleb128p1()
+    {
+        delete this->data;
+        this->data = nullptr;
+    }
+
     u4 value;
     u1* data;
     u4 length;
@@ -310,9 +336,25 @@ inline void print_map_item(map_item const* map_item)
 
 struct map_list
 {
+    map_list() {
+        this->size = 0;
+        this->list = nullptr;
+    }
+
+    map_list(u4 size)
+    {
+        this->size = size;
+        this->list = new map_item[size];
+    }
+
+    ~map_list()
+    {
+        delete[] this->list;
+        this->list = nullptr;
+    }
+
     u4 size;          // 列表的大小（以条目数表示）。
     map_item* list;   // 列表的元素。
-    unique_ptr<map_item[]> list_;
 };
 
 struct string_id_item
@@ -326,6 +368,20 @@ struct string_id_item
 
 struct string_data_item
 {
+    string_data_item()
+    {
+        this->utf16_size = nullptr;
+        this->data = nullptr;
+    }
+
+    ~string_data_item()
+    {
+        delete this->utf16_size;
+        this->utf16_size = nullptr;
+
+        delete[] this->data;
+        this->data = nullptr;
+    }
     /*
       此字符串的大小；以 UTF-16 代码单元（在许多系统中为“字符串长度”）为单位。
       也就是说，这是该字符串的解码长度（编码长度隐含在 0 字节的位置）。
