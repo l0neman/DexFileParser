@@ -8,8 +8,8 @@ class DexParser
 {
 public:
     DexParser(char const* dex_file_path);
-    void parse();
     ~DexParser();
+    void parse();
 private:
     void parse_header_item();
     void parse_map_list();
@@ -30,7 +30,7 @@ private:
 
     FILE* dex_file_;
     // 文件头。
-    header_item dex_header_{};
+    header_item dex_header_;
     // 类型映射表。
     map_list map_list_;
     // 字符串偏移信息。

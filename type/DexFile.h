@@ -24,19 +24,6 @@ typedef int64_t   s8;
 
 struct uleb128
 {
-    uleb128() 
-    { 
-        this->value = 0;
-        this->length = 0;
-        this->data = nullptr; 
-    }
-
-    ~uleb128() 
-    {
-        delete this->data;
-        this->data = nullptr;
-    }
-
     u4 value;
     u1* data;
     u4 length;
@@ -44,19 +31,6 @@ struct uleb128
 
 struct uleb128p1
 {
-    uleb128p1()
-    {
-        this->value = 0;
-        this->length = 0;
-        this->data = nullptr;
-    }
-
-    ~uleb128p1()
-    {
-        delete this->data;
-        this->data = nullptr;
-    }
-
     u4 value;
     u1* data;
     u4 length;
@@ -65,10 +39,10 @@ struct uleb128p1
 inline void parse_uleb128(/* u1[5] */u1* leb128_buffer, uleb128 *p)
 {
     const u1* p1 = leb128_buffer;
-    const u1** data = &p1;
+    const auto data = &p1;
 
-    u4 size = Leb128::decode_unsigned_leb128(data);
-    u4 length = Leb128::unsigned_leb128_size(size);
+    const auto size = Leb128::decode_unsigned_leb128(data);
+    const auto length = Leb128::unsigned_leb128_size(size);
 
     p->value = size;
     p->data = leb128_buffer;
@@ -240,7 +214,7 @@ inline void print_access_flags_description(u4 flags)
 struct header_item
 {
     /* 魔数 */
-    u1 magic[8];
+    u1 magic[8] = {0};
     /*
       文件剩余内容（除 magic 和此字段之外的所有内容)的 adler32 校验和；
       用于检测文件损坏情况。
@@ -250,7 +224,7 @@ struct header_item
       文件剩余内容（除 magic、checksum 和此字段之外的所有内容)的 SHA-1 签名（哈希)；
       用于对文件进行唯一标识。
      */
-    u1 signature[20];
+    u1 signature[20] = {0};
     /* 整个文件（包括标头)的大小，以字节为单位 */
     u4 file_size;
     /*
@@ -336,12 +310,13 @@ inline void print_map_item(map_item const* map_item)
 
 struct map_list
 {
-    map_list() {
+    map_list()
+    {
         this->size = 0;
         this->list = nullptr;
-    }
+    } 
 
-    map_list(u4 size)
+    explicit map_list(const u4 size)
     {
         this->size = size;
         this->list = new map_item[size];
@@ -349,8 +324,11 @@ struct map_list
 
     ~map_list()
     {
-        delete[] this->list;
-        this->list = nullptr;
+        if (this->list != nullptr)
+        {
+            delete[] this->list;
+            this->list = nullptr;
+        }
     }
 
     u4 size;          // 列表的大小（以条目数表示）。
@@ -370,18 +348,19 @@ struct string_data_item
 {
     string_data_item()
     {
-        this->utf16_size = nullptr;
+        this->utf16_size = new uleb128;
         this->data = nullptr;
     }
 
     ~string_data_item()
     {
-        delete this->utf16_size;
-        this->utf16_size = nullptr;
-
-        delete[] this->data;
-        this->data = nullptr;
+        if (this->utf16_size != nullptr)
+        {
+            delete this->utf16_size;
+            this->utf16_size = nullptr;
+        }
     }
+
     /*
       此字符串的大小；以 UTF-16 代码单元（在许多系统中为“字符串长度”）为单位。
       也就是说，这是该字符串的解码长度（编码长度隐含在 0 字节的位置）。
@@ -546,6 +525,30 @@ struct encoded_method
 
 struct class_data_item
 {
+    class_data_item()
+    {
+        this->static_fields_size   = new uleb128;
+        this->instance_fields_size = new uleb128;
+        this->direct_methods_size  = new uleb128;
+        this->virtual_methods_size = new uleb128;
+        this->static_fields        = nullptr;
+        this->instance_fields      = nullptr;
+        this->direct_methods       = nullptr;
+        this->virtual_methods      = nullptr;
+    }
+
+    ~class_data_item()
+    {
+        this->static_fields_size = nullptr;
+        this->instance_fields_size = nullptr;
+        this->direct_methods_size = nullptr;
+        this->virtual_methods_size = nullptr;
+        this->static_fields = nullptr;
+        this->instance_fields = nullptr;
+        this->direct_methods = nullptr;
+        this->virtual_methods = nullptr;
+    }
+
     /* 此项中定义的静态字段的数量 */
     uleb128* static_fields_size;
     /* 此项中定义的实例字段的数量 */

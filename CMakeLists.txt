@@ -3,28 +3,28 @@
 #
 cmake_minimum_required (VERSION 3.8)
 
-# enable map list info.
+# enable map_list info.
 add_definitions(-D_MAP_LIST_PRINT_)
 
-# enable string list info.
+# enable string_list info.
 # add_definitions(-D_STRING_INFO_PRINT_)
 
-# enable type list info.
+# enable type_list info.
 # add_definitions(_D_TYPE_LIST_INFO_)
 
-# enable proto list info.
+# enable proto_list info.
 # add_definitions(-D_PROTO_LIST_INFO_)
 
-# enable field list info.
+# enable field_list info.
 # add_definitions(-D_FIELD_LIST_INFO_)
 
-# enable method list info.
+# enable method_list info.
 # add_definitions(-D_METHOD_LIST_INFO_)
 
-# enable class def list info.
+# enable class_def_list info.
 # add_definitions(-D_CLASS_DEF_LIST_INFO_)
 
-# enable class data list info.
+# enable class_data_list info.
 add_definitions(-D_CLASS_DATA_LIST)
 
 # Add source to this project's executable.
@@ -40,6 +40,7 @@ add_executable (
     util/Formatter.h
     util/Printer.cpp
     util/Printer.h
+    NewDexParser.cpp
 )
 
 # TODO: Add tests and install targets if needed.

@@ -9,7 +9,7 @@
 
 uint32_t Leb128::decode_signed_leb128(uint8_t const** data)
 {
-    const uint8_t* ptr = *data;
+    auto ptr = *data;
     int32_t result = *(ptr++);
     if (result <= 0x7f)
     {
@@ -56,7 +56,7 @@ uint32_t Leb128::decode_signed_leb128(uint8_t const** data)
 
 uint32_t Leb128::decode_unsigned_leb128(uint8_t const** data)
 {
-    const uint8_t* ptr = *data;
+    auto ptr = *data;
     int result = *(ptr++);
     if (LIKELY(result > 0x7f))
     {
@@ -92,7 +92,7 @@ uint32_t Leb128::decode_unsigned_leb128_p1(uint8_t const** data)
 
 uint32_t Leb128::unsigned_leb128_size(uint32_t data)
 {
-    int count = 0;
+    auto count = 0;
     do
     {
         data >>= 7;
