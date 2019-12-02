@@ -19,8 +19,8 @@ private:
     void parse_field_ids(const u4 size, const u4 offset) const;
     void parse_method_ids(const u4 size, const u4 offset) const;
     void parse_class_defs(const u4 size, const u4 offset) const;
-    void parse_encoded_field(const int offset, encoded_field* p) const;
-    void parse_encoded_method(const int offset, encoded_method* p) const;
+    void parse_encoded_field(const u4 offset, encoded_field* p) const;
+    void parse_encoded_method(const u4 offset, encoded_method* p) const;
     void parse_class_data_list(const u4 size, const u4 offset) const;
     void call_site_ids();
     void method_handles();

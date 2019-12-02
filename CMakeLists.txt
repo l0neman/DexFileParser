@@ -40,7 +40,6 @@ add_executable (
     util/Formatter.h
     util/Printer.cpp
     util/Printer.h
-    NewDexParser.cpp
 )
 
 # TODO: Add tests and install targets if needed.
