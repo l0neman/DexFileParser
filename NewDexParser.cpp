@@ -421,44 +421,46 @@ void DexParser::parse_encoded_method(const int offset, encoded_method* p) const
 
     // parse access_flags.
     {
-        if (0 != _fseeki64(this->dex_file_, offset + p->method_idx_diff->length, 0))
+        if (0 != _fseeki64(this->dex_file_, static_cast<long long>(offset) 
+            + p->method_idx_diff->length, 0))
         {
             printf("#parse_encoded_method - seek file error.\n");
             return;
         }
 
-        const auto  uleb128_buff = new u1[5];
-        memset(uleb128_buff, 0, 5);
+        const auto  leb128_buff = new u1[5];
+        memset(leb128_buff, 0, 5);
 
-        if (0 == fread(uleb128_buff, sizeof(u1), 5, this->dex_file_))
+        if (0 == fread(leb128_buff, sizeof(u1), 5, this->dex_file_))
         {
             printf("#parse_encoded_method - read file error.\n");
             return;
         }
 
         p->access_flags = new uleb128;
-        parse_uleb128(uleb128_buff, p->access_flags);
+        parse_uleb128(leb128_buff, p->access_flags);
     }
 
     // parse code_off.
     {
-        if (0 != _fseeki64(this->dex_file_, offset + p->access_flags->length, 0))
+        if (0 != _fseeki64(this->dex_file_, static_cast<long long>(offset) 
+            + p->access_flags->length, 0))
         {
             printf("#parse_encoded_method - seek file error.\n");
             return;
         }
 
-        const auto  uleb128_buff = new u1[5];
-        memset(uleb128_buff, 0, 5);
+        const auto  leb128_buff = new u1[5];
+        memset(leb128_buff, 0, 5);
 
-        if (0 == fread(uleb128_buff, sizeof(u1), 5, this->dex_file_))
+        if (0 == fread(leb128_buff, sizeof(u1), 5, this->dex_file_))
         {
             printf("#parse_encoded_method - read file error.\n");
             return;
         }
 
         p->code_off = new uleb128;
-        parse_uleb128(uleb128_buff, p->code_off);
+        parse_uleb128(leb128_buff, p->code_off);
     }
 }
 
