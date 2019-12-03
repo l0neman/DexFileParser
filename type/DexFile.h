@@ -24,6 +24,7 @@ typedef int64_t   s8;
 
 struct uleb128
 {
+    uleb128(): value(0), data(nullptr), length(0) {}
     ~uleb128()
     {
        if (this->data != nullptr)
@@ -40,6 +41,7 @@ struct uleb128
 
 struct uleb128p1
 {
+    uleb128p1() : value(0), data(nullptr), length(0) {}
     ~uleb128p1()
     {
         if (this->data != nullptr)
@@ -231,8 +233,14 @@ inline void print_access_flags_description(u4 flags)
 
 struct header_item
 {
+    header_item() :magic{ 0 }, checksum(0), signature{ 0 }, file_size(0),
+        header_size(0), endian_tag(0), link_size(0), link_off(0), map_off(0),
+        string_ids_size(0), string_ids_off(0), type_ids_size(0),type_ids_off(0),
+        proto_ids_size(0), proto_ids_off(0), field_ids_size(0), field_ids_off(0),
+        method_ids_size(0), method_ids_off(0), class_defs_size(0), class_defs_off(0),
+        data_size(0), data_off(0) {}
     /* 魔数 */
-    u1 magic[8] = {0};
+    u1 magic[8];
     /*
       文件剩余内容（除 magic 和此字段之外的所有内容)的 adler32 校验和；
       用于检测文件损坏情况。
@@ -242,7 +250,7 @@ struct header_item
       文件剩余内容（除 magic、checksum 和此字段之外的所有内容)的 SHA-1 签名（哈希)；
       用于对文件进行唯一标识。
      */
-    u1 signature[20] = {0};
+    u1 signature[20];
     /* 整个文件（包括标头)的大小，以字节为单位 */
     u4 file_size;
     /*
@@ -328,11 +336,7 @@ inline void print_map_item(map_item const* map_item)
 
 struct map_list
 {
-    map_list()
-    {
-        this->size = 0;
-        this->list = nullptr;
-    } 
+    map_list(): size(0), list(nullptr) {} 
 
     explicit map_list(const u4 size)
     {
@@ -364,13 +368,8 @@ struct string_id_item
 
 struct string_data_item
 {
-    string_data_item()
-    {
-        this->utf16_size = uleb128();
-        this->data = nullptr;
-    }
-
-    ~string_data_item() {}
+    string_data_item():utf16_size(uleb128()), data(nullptr) {}
+    ~string_data_item() = default;
 
     /*
       此字符串的大小；以 UTF-16 代码单元（在许多系统中为“字符串长度”）为单位。
@@ -505,13 +504,8 @@ struct call_site_id_item
 
 struct encoded_field
 {
-    encoded_field() 
-    {
-        this->field_idx_diff = uleb128();
-        this->access_flags = uleb128();
-    }
+    encoded_field() : field_idx_diff(uleb128()), access_flags(uleb128()) {}
 
-    ~encoded_field() {}
     /*
       此字段标识（包括名称和描述符）的 field_ids 列表中的索引；
       它会表示为与列表中前一个元素的索引之间的差值。列表中第一个元素的索引则直接表示出来。
@@ -525,14 +519,10 @@ struct encoded_field
 
 struct encoded_method
 {
-    encoded_method() 
-    {
-        this->method_idx_diff = uleb128();
-        this->code_off = uleb128();
-        this->access_flags = uleb128();
-    }
+    encoded_method() :method_idx_diff(uleb128()), access_flags(uleb128()),
+        code_off(uleb128()) {}
 
-    ~encoded_method() {}
+    ~encoded_method() = default;
     /*
       此方法标识（包括名称和描述符）的 method_ids 列表中的索引；
       它会表示为与列表中前一个元素的索引之间的差值。列表中第一个元素的索引则直接表示出来。
@@ -551,17 +541,15 @@ struct encoded_method
 
 struct class_data_item
 {
-    class_data_item()
-    {
-        this->static_fields_size   = uleb128();
-        this->instance_fields_size = uleb128();
-        this->direct_methods_size  = uleb128();
-        this->virtual_methods_size = uleb128();
-        this->static_fields        = nullptr;
-        this->instance_fields      = nullptr;
-        this->direct_methods       = nullptr;
-        this->virtual_methods      = nullptr;
-    }
+    class_data_item():
+        static_fields_size(uleb128()),
+        instance_fields_size(uleb128()),
+        direct_methods_size(uleb128()),
+        virtual_methods_size(uleb128()),
+        static_fields(nullptr),
+        instance_fields(nullptr),
+        direct_methods(nullptr),
+        virtual_methods(nullptr) {}
 
     ~class_data_item()
     {
@@ -602,17 +590,23 @@ struct class_data_item
 
 struct type_item
 {
+    type_item() : type_idx(0) {}
     u2 type_idx; // type_ids 列表中的索引。
 };
 
 struct type_list
 {
+    type_list(): size(0), list(type_item()) {}
+
     u4 size;          // 列表的大小（以条目数表示）
-    type_item* list;; // 列表的元素。
+    type_item list;;  // 列表的元素。
 };
 
 struct code_item
 {
+    code_item() : registers_size(0), ins_size(0), outs_size(0), tries_size(0),
+        debug_info_off(0), insns_size(0), insns(nullptr) {}
+
     u2 registers_size;
     u2 ins_size;
     u2 outs_size;
@@ -627,6 +621,9 @@ struct code_item
 
 struct debug_info_item
 {
+    debug_info_item(): line_start(uleb128()), parameters_size(uleb128()),
+        parameter_names(uleb128p1()){}
+
     /*
       状态机的 line 寄存器的初始值。不表示实际的位置条目。
      */
@@ -645,6 +642,8 @@ struct debug_info_item
 
 struct field_annotation
 {
+    field_annotation(): field_idx(0), annotations_off(0) {}
+
     /* 字段（带注释）标识的 field_ids 列表中的索引 */
     u4 field_idx;
     /*
@@ -656,6 +655,8 @@ struct field_annotation
 
 struct method_annotation
 {
+    method_annotation(): method_idx(0), annotations_off(0) {}
+
     /* 方法（带注释）标识的 method_ids 列表中的索引 */
     u4 method_idx;
     /*
@@ -667,6 +668,8 @@ struct method_annotation
 
 struct parameter_annotation
 {
+    parameter_annotation(): method_idx(0), annotations_off(0) {}
+
     /* 方法（其参数带注释）标识的 method_ids 列表中的索引 */
     u4 method_idx;
     /*
@@ -678,6 +681,11 @@ struct parameter_annotation
 
 struct annotations_directory_item
 {
+    annotations_directory_item() : class_annotations_off(0), fields_size(0),
+        annotated_methods_size(0), annotated_parameters_size(0),
+        field_annotations(nullptr), method_annotations(nullptr),
+        parameter_annotation(nullptr) {}
+
     /*
       从文件开头到直接在该类上所做的注释的偏移量；如果该类没有任何直接注释，则该值为 0。
       该偏移量（如果为非零值）应该是到 data 区段中某个位置的偏移量。数据格式由下文的
@@ -702,12 +710,6 @@ struct annotations_directory_item
       Optional，所关联方法参数的注释列表。该列表中的元素必须按 method_idx 以升序进行排序。
      */
     parameter_annotation* parameter_annotation;
-};
-
-struct DexFile
-{
-    header_item* header;
-
 };
 
 inline void print_dex_header(header_item* dex_header) {

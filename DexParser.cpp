@@ -2,7 +2,6 @@
 
 #include "DexParser.h"
 #include "type/DexFile.h"
-#include "type/Leb128.h"
 
 void DexParser::parse_header_item()
 {
@@ -357,7 +356,7 @@ void DexParser::parse_encoded_field(const u4 offset, encoded_field* p) const
 {
     // parse field_idx_diff.
     {
-        if (0 != fseek(this->dex_file_, offset, 0))
+        if (0 != _fseeki64(this->dex_file_, offset, 0))
         {
             printf("#parse_encoded_field - seek file error.\n");
             return;
@@ -377,7 +376,7 @@ void DexParser::parse_encoded_field(const u4 offset, encoded_field* p) const
 
     // parse access_flags.
     {
-        if (0 != fseek(this->dex_file_, offset + p->field_idx_diff.length, 0))
+        if (0 != _fseeki64(this->dex_file_, offset + p->field_idx_diff.length, 0))
         {
             printf("#parse_encoded_field - seek file error.\n");
             return;
@@ -406,7 +405,7 @@ void DexParser::parse_encoded_method(const u4 offset, encoded_method* p) const
             return;
         }
 
-        u1* uleb128_buff = new u1[5];
+        const auto uleb128_buff = new u1[5];
         memset(uleb128_buff, 0, 5);
 
         if (0 == fread(uleb128_buff, sizeof(u1), 5, this->dex_file_))
@@ -420,7 +419,7 @@ void DexParser::parse_encoded_method(const u4 offset, encoded_method* p) const
 
     // parse access_flags.
     {
-        if (0 != fseek(this->dex_file_, offset + p->method_idx_diff.length, 0))
+        if (0 != _fseeki64(this->dex_file_, offset + p->method_idx_diff.length, 0))
         {
             printf("#parse_encoded_field - seek file error.\n");
             return;
@@ -440,7 +439,7 @@ void DexParser::parse_encoded_method(const u4 offset, encoded_method* p) const
 
     // parse code_off.
     {
-        if (0 != fseek(this->dex_file_, offset + p->method_idx_diff.length +
+        if (0 != _fseeki64(this->dex_file_, offset + p->method_idx_diff.length +
             p->access_flags.length, 0))
         {
             printf("#parse_encoded_field - seek file error.\n");
@@ -482,7 +481,7 @@ void DexParser::parse_class_data_list(const u4 size, const u4 offset) const
 
         // parse static_fields_size.
         {
-            if (0 != fseek(this->dex_file_, offset + seek_add, 0))
+            if (0 != _fseeki64(this->dex_file_, offset + seek_add, 0))
             {
                 printf("#parse_class_data_list - seek file error.\n");
                 return;
@@ -504,7 +503,7 @@ void DexParser::parse_class_data_list(const u4 size, const u4 offset) const
 
         // parse instance_field_size.
         {
-            if (0 != fseek(this->dex_file_, offset + seek_add, 0))
+            if (0 != _fseeki64(this->dex_file_, offset + seek_add, 0))
             {
                 printf("#parse_class_data_list - seek file error.\n");
                 return;
@@ -526,7 +525,7 @@ void DexParser::parse_class_data_list(const u4 size, const u4 offset) const
 
         // parse direct_methods_size.
         {
-            if (0 != fseek(this->dex_file_, offset + seek_add, 0))
+            if (0 != _fseeki64(this->dex_file_, offset + seek_add, 0))
             {
                 printf("#parse_class_data_list - seek file error.\n");
                 return;
@@ -548,7 +547,7 @@ void DexParser::parse_class_data_list(const u4 size, const u4 offset) const
 
         // parse virtual_methods_size.
         {
-            if (0 != fseek(this->dex_file_, offset + seek_add, 0))
+            if (0 != _fseeki64(this->dex_file_, offset + seek_add, 0))
             {
                 printf("#parse_class_data_list - seek file error.\n");
                 return;
@@ -726,8 +725,8 @@ void DexParser::parse()
 DexParser::DexParser(char const* dex_file_path)
 {
     this->dex_file_ = nullptr;
-    this->dex_header_ = {};
-    this->map_list_ = {};
+    this->dex_header_ = header_item();
+    this->map_list_ = map_list();
     this->string_ids_ = nullptr;
     this->string_list_size_ = 0;
     this->string_list_ = nullptr;
