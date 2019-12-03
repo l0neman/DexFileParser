@@ -376,7 +376,8 @@ void DexParser::parse_encoded_field(const u4 offset, encoded_field* p) const
 
     // parse access_flags.
     {
-        if (0 != _fseeki64(this->dex_file_, offset + p->field_idx_diff.length, 0))
+        if (0 != _fseeki64(this->dex_file_, static_cast<long long>(offset) +
+            p->field_idx_diff.length, 0))
         {
             printf("#parse_encoded_field - seek file error.\n");
             return;
@@ -419,7 +420,8 @@ void DexParser::parse_encoded_method(const u4 offset, encoded_method* p) const
 
     // parse access_flags.
     {
-        if (0 != _fseeki64(this->dex_file_, offset + p->method_idx_diff.length, 0))
+        if (0 != _fseeki64(this->dex_file_, static_cast<long long>(offset) +
+            p->method_idx_diff.length, 0))
         {
             printf("#parse_encoded_field - seek file error.\n");
             return;
@@ -439,7 +441,8 @@ void DexParser::parse_encoded_method(const u4 offset, encoded_method* p) const
 
     // parse code_off.
     {
-        if (0 != _fseeki64(this->dex_file_, offset + p->method_idx_diff.length +
+        if (0 != _fseeki64(this->dex_file_, static_cast<long long>(offset) +
+            p->method_idx_diff.length +
             p->access_flags.length, 0))
         {
             printf("#parse_encoded_field - seek file error.\n");
@@ -475,13 +478,16 @@ void DexParser::parse_class_data_list(const u4 size, const u4 offset) const
     u4 seek_add = 0;
     for (u4 i = 0; i < size; i++)
     {
+#ifdef _CLASS_DATA_LIST
         printf("\nparse %d class_data_item:\n\n", i);
         printf("seek add: %d\n", seek_add);
+#endif // D_CLASS_DATA_LIST
         class_data_item* item = &class_data_list[i];
 
         // parse static_fields_size.
         {
-            if (0 != _fseeki64(this->dex_file_, offset + seek_add, 0))
+            if (0 != _fseeki64(this->dex_file_, static_cast<long long>(offset) +
+                seek_add, 0))
             {
                 printf("#parse_class_data_list - seek file error.\n");
                 return;
@@ -497,13 +503,16 @@ void DexParser::parse_class_data_list(const u4 size, const u4 offset) const
             }
 
             parse_uleb128(leb128_buffer, &item->static_fields_size);
+#ifdef _CLASS_DATA_LIST
             printf("static fields size: %d\n", item->static_fields_size.value);
+#endif // _CLASS_DATA_LIST
             seek_add += item->static_fields_size.length;
         }
 
         // parse instance_field_size.
         {
-            if (0 != _fseeki64(this->dex_file_, offset + seek_add, 0))
+            if (0 != _fseeki64(this->dex_file_, static_cast<long long>(offset) +
+                seek_add, 0))
             {
                 printf("#parse_class_data_list - seek file error.\n");
                 return;
@@ -519,13 +528,16 @@ void DexParser::parse_class_data_list(const u4 size, const u4 offset) const
             }
 
             parse_uleb128(leb128_buffer, &item->instance_fields_size);
+#ifdef _CLASS_DATA_LIST
             printf("instance fields size: %d\n", item->instance_fields_size.value);
+#endif // _CLASS_DATA_LIST
             seek_add += item->instance_fields_size.length;
         }
 
         // parse direct_methods_size.
         {
-            if (0 != _fseeki64(this->dex_file_, offset + seek_add, 0))
+            if (0 != _fseeki64(this->dex_file_, static_cast<long long>(offset) +
+                seek_add, 0))
             {
                 printf("#parse_class_data_list - seek file error.\n");
                 return;
@@ -541,13 +553,16 @@ void DexParser::parse_class_data_list(const u4 size, const u4 offset) const
             }
 
             parse_uleb128(leb128_buffer, &item->direct_methods_size);
+#ifdef _CLASS_DATA_LIST
             printf("direct methods size: %d\n", item->direct_methods_size.value);
+#endif // _CLASS_DATA_LIST
             seek_add += item->direct_methods_size.length;
         }
 
         // parse virtual_methods_size.
         {
-            if (0 != _fseeki64(this->dex_file_, offset + seek_add, 0))
+            if (0 != _fseeki64(this->dex_file_, static_cast<long long>(offset) +
+                seek_add, 0))
             {
                 printf("#parse_class_data_list - seek file error.\n");
                 return;
@@ -563,7 +578,9 @@ void DexParser::parse_class_data_list(const u4 size, const u4 offset) const
             }
 
             parse_uleb128(leb128_buffer, &item->virtual_methods_size);
+#ifdef _CLASS_DATA_LIST
             printf("virtual methods size: %d\n", item->virtual_methods_size.value);
+#endif // _CLASS_DATA_LIST
             seek_add += item->virtual_methods_size.length;
         }
 
@@ -595,8 +612,6 @@ void DexParser::parse_class_data_list(const u4 size, const u4 offset) const
                 item->direct_methods[j].code_off.length;
         }
 
-        printf("parse virtual_methods.\n");
-
         // parse virtual_methods.
         item->virtual_methods = new encoded_method[item->virtual_methods_size.value];
         for (u4 j = 0; j < item->virtual_methods_size.value; j++)
@@ -627,6 +642,57 @@ void DexParser::parse_class_data_list(const u4 size, const u4 offset) const
 
     delete[] class_data_list;
     class_data_list = nullptr;
+}
+
+void DexParser::parse_code_list(const u4 size, const u4 offset) const
+{
+    printf("code list size: %u\n", size);
+    printf("code list offset: %u\n", offset);
+
+    if (0 != _fseeki64(this->dex_file_, static_cast<long long>(offset), 0))
+    {
+        printf("#parse_code_list - seek file error.\n");
+        return;
+    }
+
+    code_item* code_list = new code_item[size];
+
+    u4 seek_add = 0;
+    for (u4 i = 0; i < size; i++)
+    {
+        printf("\nparse %d, code_item.\n\n", i);
+        printf("seek_add: %d", seek_add);
+
+        if (0 != _fseeki64(this->dex_file_, static_cast<long long>(offset) +
+            seek_add, 0))
+        {
+            printf("#parse_code_list - seek file error.\n");
+            return;
+        }
+
+        code_item* item = &code_list[i];
+
+        // size: registers_size, ins_size, outs_size, tries_size, debug_info_off, insns_size
+        if (0 == fread(item, sizeof(u2) * 4 + sizeof(u4) * 2, 1, this->dex_file_))
+        {
+            printf("#parse_code_list - read file error.\n");
+            return;
+        }
+
+        u2* insns = new u2[];
+    }
+
+    for (u4 i = 0; i < size; i++)
+    {
+        delete[] code_list[i].insns;
+        code_list[i].insns = nullptr;
+
+        delete[] code_list[i].tries;
+        code_list[i].insns = nullptr;
+    }
+
+    delete[] code_list;
+    code_list = nullptr;
 }
 
 void DexParser::call_site_ids()

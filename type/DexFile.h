@@ -559,14 +559,10 @@ struct class_data_item
         this->virtual_methods = nullptr;
     }
 
-    /* 此项中定义的静态字段的数量 */
-    uleb128 static_fields_size;
-    /* 此项中定义的实例字段的数量 */
-    uleb128 instance_fields_size;
-    /* 此项中定义的直接方法的数量 */
-    uleb128 direct_methods_size;
-    /* 此项中定义的虚拟方法的数量 */
-    uleb128 virtual_methods_size;
+    uleb128 static_fields_size;    // 此项中定义的静态字段的数量。
+    uleb128 instance_fields_size;  // 此项中定义的实例字段的数量。
+    uleb128 direct_methods_size;   // 此项中定义的直接方法的数量。
+    uleb128 virtual_methods_size;  // 此项中定义的虚拟方法的数量。
     /*
       定义的静态字段；以一系列编码元素的形式表示。这些字段必须按 field_idx 以升序进行排序。
      */
@@ -591,7 +587,7 @@ struct class_data_item
 struct type_item
 {
     type_item() : type_idx(0) {}
-    u2 type_idx; // type_ids 列表中的索引。
+    u2 type_idx;  // type_ids 列表中的索引。
 };
 
 struct type_list
@@ -602,21 +598,102 @@ struct type_list
     type_item list;;  // 列表的元素。
 };
 
+struct try_item
+{
+    /*
+      此条目涵盖的代码块的起始地址。该地址是到第一个所涵盖指令开头部分的 16 位代码
+      单元的计数。
+    */
+    u4 start_addr;
+    /*
+      此条目所覆盖的 16 位代码单元的数量。所涵盖（包含）的最后一个代码单元是 
+      start_addr + insn_count - 1。
+    */
+    u2 insn_count;
+    /*
+      从关联的 encoded_catch_hander_list 开头部分到此条目的 encoded_catch_handler 
+      的偏移量（以字节为单位）。此偏移量必须是到 encoded_catch_handler 开头部分的
+      偏移量。
+    */
+    u2 handler_off;
+};
+
+struct encoded_type_addr_pair
+{
+    uleb128 type_ids;  // 要捕获的异常类型的 type_ids 列表中的索引。
+    uleb128 addr;      // 关联的异常处理程序的字节码地址。
+};
+
+struct encoded_catch_handler
+{
+    /*
+      此列表中捕获类型的数量。如果为非正数，则该值是捕获类型数量的负数，捕获数量后
+      跟一个“全部捕获”处理程序。例如，size 为 0 表示捕获类型为“全部捕获”，而没有明
+      确类型的捕获。size 为 2 表示有两个明确类型的捕获，但没有“全部捕获”类型的捕获。
+      size 为 -1 表示有一个明确类型的捕获和一个“全部捕获”类型的捕获。
+    */
+    uleb128 size;
+    /*
+      abs(size) 编码项的信息流（一种捕获类型对应一项）；按照应对类型进行测试的顺序排列。
+    */
+    encoded_type_addr_pair *handlers;
+    /*
+      “全部捕获”处理程序的字节码地址。只有当 size 为非正数时，此元素才会存在。
+    */
+    uleb128 catch_add_addr;
+};
+
+struct encode_catch_handler_list
+{
+    uleb128 size;  // 列表的大小（以条目数表示）。
+    /*
+      处理程序列表的实际列表，直接表示（不作为偏移量）并依序连接。
+    */
+    encoded_catch_handler* list;
+};
+
 struct code_item
 {
     code_item() : registers_size(0), ins_size(0), outs_size(0), tries_size(0),
         debug_info_off(0), insns_size(0), insns(nullptr) {}
 
-    u2 registers_size;
-    u2 ins_size;
-    u2 outs_size;
+    u2 registers_size; // 此代码使用的寄存器数量。
+    u2 ins_size;       // 此代码所用方法的传入参数的字数。
+    u2 outs_size;      // 此代码进行方法调用所需的传出参数空间的字数。
+    /* 
+      此实例的 try_item 数量。如果此值为非零值，则这些项会显示为 tries 数组
+     （正好位于此实例中 insns 的后面）。 
+    */
     u2 tries_size;
+    /*
+      从文件开头到此代码的调试信息（行号 + 局部变量信息）序列的偏移量；如果没有任
+      何信息，则该值为 0。该偏移量（如果为非零值）应该是到 data 区段中某个位置的偏移量。数据格式由下文的“debug_info_item”指定。
+    */
     u4 debug_info_off;
-    u4 insns_size;
+    u4 insns_size;   // 指令列表的大小（以 16 位代码单元为单位）。
+    /*
+      字节码的实际数组。insns 数组中代码的格式由随附文档 Dalvik 字节码指定。请注意，
+      尽管此项被定义为 ushort 的数组，但仍有一些内部结构倾向于采用四字节对齐方式。
+      此外，如果此项恰好位于某个字节序交换文件中，则交换操作将只在单个 ushort 上进
+      行，而不是在较大的内部结构上进行。
+    */
     u2* insns;
-    // optional: u2 padding;
-    // optional: try_item[tries_size]
-    // optional: encode_catch_handler_list;
+    /*
+      （可选）使 tries 实现四字节对齐的两字节填充。只有 tries_size 为非零值且 
+      insns_size 是奇数时，此元素才会存在。
+    */
+    u2 padding;
+    /*
+      （可选）用于表示在代码中捕获异常的位置以及如何对异常进行处理的数组。该数组的元
+      素在范围内不得重叠，且数值地址按照从低到高的顺序排列。只有 tries_size 为非零
+      值时，此元素才会存在。
+    */
+    try_item* tries;
+    /* 
+      （可选）用于表示“捕获类型列表和关联处理程序地址”的列表的字节。每个 try_item 
+      都具有到此结构的分组偏移量。只有 tries_size 为非零值时，此元素才会存在。
+    */
+    encode_catch_handler_list handlers;
 };
 
 struct debug_info_item
@@ -692,12 +769,9 @@ struct annotations_directory_item
       “annotation_set_item”指定。
      */
     u4 class_annotations_off;
-    /* 此项所注释的字段数量 */
-    u4 fields_size;
-    /* 此项所注释的方法数量 */
-    u4 annotated_methods_size;
-    /* 此项所注释的方法参数列表的数量 */
-    u4 annotated_parameters_size;
+    u4 fields_size;                // 此项所注释的字段数量。
+    u4 annotated_methods_size;     // 此项所注释的方法数量。
+    u4 annotated_parameters_size;  // 此项所注释的方法参数列表的数量。
     /*
       Optional，所关联字段的注释列表。该列表中的元素必须按 field_idx 以升序进行排序。
      */
