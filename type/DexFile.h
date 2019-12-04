@@ -39,6 +39,23 @@ struct uleb128
     u4 length;
 };
 
+struct sleb128
+{
+    sleb128() : value(0), data(nullptr), length(0) {}
+    ~sleb128()
+    {
+        if (this->data != nullptr)
+        {
+            delete[] this->data;
+            this->data = nullptr;
+        }
+    }
+
+    u4 value;
+    u1* data;
+    u4 length;
+};
+
 struct uleb128p1
 {
     uleb128p1() : value(0), data(nullptr), length(0) {}
@@ -369,8 +386,52 @@ struct string_id_item
 struct string_data_item
 {
     string_data_item():utf16_size(uleb128()), data(nullptr) {}
-    ~string_data_item() = default;
+    string_data_item(FILE* dex_file, const u4 offset)
+    {
+        // parse utf16_size.
+        {
+            if (0 != fseek(dex_file, offset, 0))
+            {
+                printf("#string_data_item - seek file error.");
+                return;
+            }
 
+            const auto leb128_buffer = new u1[5];
+            memset(leb128_buffer, 0, 5);
+
+            if (0 == fread(leb128_buffer, sizeof(u1), 5, dex_file))
+            {
+                printf("#string_data_item - read file error.\n");
+                return;
+            }
+
+            this->utf16_size = uleb128();
+            parse_uleb128(leb128_buffer, &this->utf16_size);
+        }
+        
+        // parse data.
+        {
+            // 最后一个留给 '\0' 用。
+            const auto str_size = this->utf16_size.value + 1;
+            const auto str_buf = new char[str_size];
+
+            if (0 != _fseeki64(dex_file, static_cast<long long>(offset) +
+                this->utf16_size.length, 0))
+            {
+                printf("#parse_string_list - seek file error.");
+                return;
+            }
+
+            if (0 == fread(str_buf, sizeof(char) * (str_size - 1), 1, dex_file))
+            {
+                printf("#parse_string_list - read file error.");
+                return;
+            }
+
+            str_buf[str_size - 1] = '\0';
+            this->data = reinterpret_cast<u1*>(str_buf);
+        }
+    }
     /*
       此字符串的大小；以 UTF-16 代码单元（在许多系统中为“字符串长度”）为单位。
       也就是说，这是该字符串的解码长度（编码长度隐含在 0 字节的位置）。
@@ -629,13 +690,15 @@ struct encoded_type_addr_pair
 
 struct encoded_catch_handler
 {
+    encoded_catch_handler() :size(sleb128()), handlers(nullptr), 
+        catch_add_addr(uleb128()) {}
     /*
       此列表中捕获类型的数量。如果为非正数，则该值是捕获类型数量的负数，捕获数量后
       跟一个“全部捕获”处理程序。例如，size 为 0 表示捕获类型为“全部捕获”，而没有明
       确类型的捕获。size 为 2 表示有两个明确类型的捕获，但没有“全部捕获”类型的捕获。
       size 为 -1 表示有一个明确类型的捕获和一个“全部捕获”类型的捕获。
     */
-    uleb128 size;
+    sleb128 size;
     /*
       abs(size) 编码项的信息流（一种捕获类型对应一项）；按照应对类型进行测试的顺序排列。
     */
@@ -646,8 +709,10 @@ struct encoded_catch_handler
     uleb128 catch_add_addr;
 };
 
-struct encode_catch_handler_list
+struct encoded_catch_handler_list
 {
+    encoded_catch_handler_list() :size(uleb128()), list(nullptr){}
+
     uleb128 size;  // 列表的大小（以条目数表示）。
     /*
       处理程序列表的实际列表，直接表示（不作为偏移量）并依序连接。
@@ -659,7 +724,7 @@ struct code_item
 {
     code_item() : registers_size(0), ins_size(0), outs_size(0), tries_size(0),
         debug_info_off(0), insns_size(0), insns(nullptr), padding(0),
-        tries(nullptr), handlers(encode_catch_handler_list()) {}
+        tries(nullptr), handlers(encoded_catch_handler_list()) {}
 
     u2 registers_size; // 此代码使用的寄存器数量。
     u2 ins_size;       // 此代码所用方法的传入参数的字数。
@@ -697,7 +762,7 @@ struct code_item
       （可选）用于表示“捕获类型列表和关联处理程序地址”的列表的字节。每个 try_item 
       都具有到此结构的分组偏移量。只有 tries_size 为非零值时，此元素才会存在。
     */
-    encode_catch_handler_list handlers;
+    encoded_catch_handler_list handlers;
 };
 
 struct debug_info_item

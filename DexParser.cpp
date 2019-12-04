@@ -3,6 +3,8 @@
 #include "DexParser.h"
 #include "type/DexFile.h"
 
+// todo: 我们应该采用面向对象的方式解析 uleb128，不然太麻烦了。
+
 void DexParser::parse_header_item()
 {
     if (0 == fread(&this->dex_header_, sizeof(header_item), 1,
@@ -127,57 +129,9 @@ void DexParser::parse_string_list(const u4 size, const u4 offset)
 #ifdef _STRING_INFO_PRINT_
         printf("\nstring offset: %d\n", str_off);
 #endif
-        if (0 != fseek(this->dex_file_, str_off, 0))
-        {
-            printf("#parse_string_list - seek file error.");
-            return;
-        }
-
-        // leb 为 1~5 byte，那么为了解析它，给予 5 byte 的缓冲。
-        const auto leb128_buffer = new u1[5];
-        memset(leb128_buffer, 0, 5);
-
-        if (0 == fread(leb128_buffer, sizeof(u1), 5, this->dex_file_))
-        {
-            printf("#parse_encoded_method - read file error.\n");
-            return;
-        }
-
-        auto string_item_size = this->string_list_[i].utf16_size;
-        parse_uleb128(leb128_buffer, &string_item_size);
-
-        // reset struct.
-        this->string_list_[i] = string_data_item();
-
+        this->string_list_[i] = string_data_item(this->dex_file_, str_off);
 #ifdef _STRING_INFO_PRINT_
-        printf("leb128 length: %d\n", length);
-        printf("string size: %d\n", size);
-#endif
-
-        // 最后一个留给 '\0' 用。
-        const auto str_size = string_item_size.value + 1;
-        const auto str_buf = new char[str_size];
-
-        if (0 != _fseeki64(this->dex_file_, static_cast<long long>(
-            str_off) + string_item_size.length, 0))
-        {
-            printf("#parse_string_list - seek file error.");
-            return;
-        }
-
-        if (0 == fread(str_buf, sizeof(char) * (str_size - 1),
-            1, this->dex_file_))
-        {
-            printf("#parse_string_list - read file error.");
-            return;
-        }
-
-        str_buf[str_size - 1] = '\0';
-
-        this->string_list_[i].data = reinterpret_cast<u1*>(str_buf);
-
-#ifdef _STRING_INFO_PRINT_
-        printf("string: %s\n", str_buf);
+        printf("string: %s\n", this->string_list_[i].data);
 #endif
     }
 }
@@ -644,6 +598,46 @@ void DexParser::parse_class_data_list(const u4 size, const u4 offset) const
     class_data_list = nullptr;
 }
 
+void DexParser::parse_encoded_catch_handler(const u4 offset,
+    encoded_catch_handler* p) const
+{
+    if (0 != fseek(this->dex_file_, offset, 0))
+    {
+        printf("#parse_encoded_catch_handler - seek file error.");
+        return;
+    }
+}
+
+void DexParser::parse_encoded_catch_handler_list(const u4 offset,
+    encoded_catch_handler_list* p) const
+{
+    if (0 != fseek(this->dex_file_, offset, 0))
+    {
+        printf("#parse_encoded_catch_handler_list - seek file error.");
+        return;
+    }
+
+    const auto leb_buff = new u1[5];
+    memset(leb_buff, 0, 5);
+    
+    if (0 == fread(leb_buff, sizeof(u1) * 5, 1, this->dex_file_))
+    {
+        printf("#parse_encoded_catch_handler_list - read file error.");
+        return;
+    }
+
+    parse_uleb128(leb_buff, &p->size);
+
+    p->list = new encoded_catch_handler[p->size.value];
+    u4 seek_add = p->size.length;
+    for (u4 i = 0; i < p->size.value; i++)
+    {
+        encoded_catch_handler* handler = &p->list[i];
+        parse_encoded_catch_handler(offset + seek_add, handler);
+        // todo:
+    }
+}
+
 void DexParser::parse_code_list(const u4 size, const u4 offset) const
 {
     printf("code list size: %u\n", size);
@@ -655,7 +649,7 @@ void DexParser::parse_code_list(const u4 size, const u4 offset) const
         return;
     }
 
-    code_item* code_list = new code_item[size];
+    auto code_list = new code_item[size];
 
     u4 seek_add = 0;
     for (u4 i = 0; i < size; i++)
@@ -670,7 +664,7 @@ void DexParser::parse_code_list(const u4 size, const u4 offset) const
             return;
         }
 
-        code_item* item = &code_list[i];
+        const auto item = &code_list[i];
 
         // size: registers_size, ins_size, outs_size, tries_size, debug_info_off, insns_size
         const u4 part_szie = sizeof(u2) * 4 + sizeof(u4) * 2;
@@ -796,7 +790,7 @@ void DexParser::parse()
             parse_class_data_list(item.size, item.offset);
             break;
         case TYPE_CODE_ITEM:
-            parse_code_list(item.size, item.offset);
+            // parse_code_list(item.size, item.offset);
             break;
         case TYPE_STRING_DATA_ITEM:
             printf("ignore.\n");
