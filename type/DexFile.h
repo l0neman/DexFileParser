@@ -600,6 +600,7 @@ struct type_list
 
 struct try_item
 {
+    try_item() :start_addr(0), insn_count(0), handler_off(0) {}
     /*
       此条目涵盖的代码块的起始地址。该地址是到第一个所涵盖指令开头部分的 16 位代码
       单元的计数。
@@ -620,6 +621,8 @@ struct try_item
 
 struct encoded_type_addr_pair
 {
+    encoded_type_addr_pair() : type_ids(uleb128()), addr(uleb128()) {}
+
     uleb128 type_ids;  // 要捕获的异常类型的 type_ids 列表中的索引。
     uleb128 addr;      // 关联的异常处理程序的字节码地址。
 };
@@ -655,7 +658,8 @@ struct encode_catch_handler_list
 struct code_item
 {
     code_item() : registers_size(0), ins_size(0), outs_size(0), tries_size(0),
-        debug_info_off(0), insns_size(0), insns(nullptr) {}
+        debug_info_off(0), insns_size(0), insns(nullptr), padding(0),
+        tries(nullptr), handlers(encode_catch_handler_list()) {}
 
     u2 registers_size; // 此代码使用的寄存器数量。
     u2 ins_size;       // 此代码所用方法的传入参数的字数。

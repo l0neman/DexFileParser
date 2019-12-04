@@ -673,13 +673,39 @@ void DexParser::parse_code_list(const u4 size, const u4 offset) const
         code_item* item = &code_list[i];
 
         // size: registers_size, ins_size, outs_size, tries_size, debug_info_off, insns_size
-        if (0 == fread(item, sizeof(u2) * 4 + sizeof(u4) * 2, 1, this->dex_file_))
+        const u4 part_szie = sizeof(u2) * 4 + sizeof(u4) * 2;
+        if (0 == fread(item, part_szie, 1, this->dex_file_))
         {
             printf("#parse_code_list - read file error.\n");
             return;
         }
 
-        u2* insns = new u2[];
+        seek_add += part_szie;
+
+        if (0 != _fseeki64(this->dex_file_, static_cast<long long>(offset) + 
+            seek_add, 0))
+        {
+            printf("#parse_code_list - seek file error.");
+            return;
+        }
+        
+        u2* insns = new u2[item->insns_size];
+        if (0 == fread(insns, sizeof(u2), item->insns_size, this->dex_file_))
+        {
+            printf("#parse_code_list - read file errr.");
+            return;
+        }
+
+        if (item->tries_size != 0)
+        {
+            // 1. ignore parse padding.
+            seek_add += sizeof(u2);
+
+            // 2. ignore parse tries.
+            seek_add += sizeof(try_item) * item->tries_size;
+
+            // 3. ignore parse handlers.
+        }
     }
 
     for (u4 i = 0; i < size; i++)
@@ -770,6 +796,7 @@ void DexParser::parse()
             parse_class_data_list(item.size, item.offset);
             break;
         case TYPE_CODE_ITEM:
+            parse_code_list(item.size, item.offset);
             break;
         case TYPE_STRING_DATA_ITEM:
             printf("ignore.\n");
@@ -790,9 +817,9 @@ void DexParser::parse()
 
 DexParser::DexParser(char const* dex_file_path)
 {
-    this->dex_file_ = nullptr;
+    this->dex_file_   = nullptr;
     this->dex_header_ = header_item();
-    this->map_list_ = map_list();
+    this->map_list_   = map_list();
     this->string_ids_ = nullptr;
     this->string_list_size_ = 0;
     this->string_list_ = nullptr;
