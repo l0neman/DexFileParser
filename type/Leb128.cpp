@@ -1,5 +1,7 @@
 #include "Leb128.h"
 
+#include <iostream>
+
 #ifndef _HEY_I_AM_RUNNING_STATIC_ANALYZER
 #define __builtin_expect(e,c) (e)
 #endif
@@ -100,4 +102,17 @@ uint32_t Leb128::unsigned_leb128_size(uint32_t data)
     } while (data != 0);
 
     return count;
+}
+
+template < typename T>
+  static constexpr int CLZ(T x) {
+      return (sizeof(T) == sizeof(uint32_t)) ?
+      __builtin_clz(x) : __builtin_clzll(x);
+}
+
+int32_t Leb128::signed_leb128_size(uint32_t data)
+{
+    data = data ^ (data >> 31);
+    uint32_t x = 1 + 6 + 32 - CLZ(data | 1U);
+    return (x * 37) >> 8;
 }

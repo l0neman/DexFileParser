@@ -34,6 +34,26 @@ struct uleb128
        }
     }
 
+    void parse(FILE *dex_file, const u4 offset) 
+    {
+        if (0 != fseek(dex_file, offset, 0))
+        {
+            printf("#parse - seek file error.\n");
+            return;
+        }
+
+        u1* leb128_buffer = new u1[5];
+        memset(leb128_buffer, 0, 5);
+
+        if (0 == fread(leb128_buffer, sizeof(u1), 5, dex_file))
+        {
+            printf("#parse_class_data_list - read file error.\n");
+            return;
+        }
+
+        parse_uleb128(leb128_buffer, this);
+    }
+
     u4 value;
     u1* data;
     u4 length;
@@ -51,7 +71,27 @@ struct sleb128
         }
     }
 
-    u4 value;
+    void parse(FILE* dex_file, const u4 offset)
+    {
+        if (0 != fseek(dex_file, offset, 0))
+        {
+            printf("#parse - seek file error.\n");
+            return;
+        }
+
+        u1* leb128_buffer = new u1[5];
+        memset(leb128_buffer, 0, 5);
+
+        if (0 == fread(leb128_buffer, sizeof(u1), 5, dex_file))
+        {
+            printf("#parse_class_data_list - read file error.\n");
+            return;
+        }
+
+        parse_sleb128(leb128_buffer, this);
+    }
+
+    s4 value;
     u1* data;
     u4 length;
 };
@@ -80,6 +120,19 @@ inline void parse_uleb128(/* u1[5] */u1* leb128_buffer, uleb128 *p)
 
     const auto size = Leb128::decode_unsigned_leb128(data);
     const auto length = Leb128::unsigned_leb128_size(size);
+
+    p->value = size;
+    p->data = leb128_buffer;
+    p->length = length;
+}
+
+inline void parse_sleb128(/* u1[5] */u1* leb128_buffer, sleb128* p)
+{
+    const u1* p1 = leb128_buffer;
+    const auto data = &p1;
+
+    const auto size = Leb128::decode_signed_leb128(data);
+    const auto length = Leb128::signed_leb128_size(size);
 
     p->value = size;
     p->data = leb128_buffer;
@@ -682,9 +735,9 @@ struct try_item
 
 struct encoded_type_addr_pair
 {
-    encoded_type_addr_pair() : type_ids(uleb128()), addr(uleb128()) {}
+    encoded_type_addr_pair() : type_idx(uleb128()), addr(uleb128()) {}
 
-    uleb128 type_ids;  // 要捕获的异常类型的 type_ids 列表中的索引。
+    uleb128 type_idx;  // 要捕获的异常类型的 type_ids 列表中的索引。
     uleb128 addr;      // 关联的异常处理程序的字节码地址。
 };
 
@@ -692,6 +745,7 @@ struct encoded_catch_handler
 {
     encoded_catch_handler() :size(sleb128()), handlers(nullptr), 
         catch_add_addr(uleb128()) {}
+
     /*
       此列表中捕获类型的数量。如果为非正数，则该值是捕获类型数量的负数，捕获数量后
       跟一个“全部捕获”处理程序。例如，size 为 0 表示捕获类型为“全部捕获”，而没有明
