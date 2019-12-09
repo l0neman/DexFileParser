@@ -5,6 +5,7 @@
 class Printer
 {
 public:
+    static void print_ushort_array(uint16_t const* array, const unsigned int size);
     static void print_int_array(int const* array, const unsigned int size);
     static void print_hex_array(uint8_t const* array, const unsigned int size);
 };

@@ -418,22 +418,6 @@ void DexParser::parse_class_data_list(const u4 size, const u4 offset) const
         }
     }
 
-    for (u4 i = 0; i < size; i++)
-    {
-        class_data_item& data_item = class_data_list[i];
-        delete[] data_item.static_fields;
-        data_item.static_fields = nullptr;
-
-        delete[] data_item.instance_fields;
-        data_item.instance_fields = nullptr;
-
-        delete[] data_item.direct_methods;
-        data_item.direct_methods = nullptr;
-
-        delete[] data_item.virtual_methods;
-        data_item.virtual_methods = nullptr;
-    }
-
     delete[] class_data_list;
     class_data_list = nullptr;
 }
@@ -451,7 +435,8 @@ u4 DexParser::parse_encoded_catch_handler(const u4 offset,
 
     p->handlers = new encoded_type_addr_pair[abs(p->size.value)];
     u4 seek_add = 0;
-    for (u4 i = 0; i < p->size.value; i++)
+    const u4 t_szie = abs(p->size.value);
+    for (u4 i = 0; i < t_szie; i++)
     {
         parse_encoded_type_addr_pair(offset + seek_add, &p->handlers[i]);
         seek_add += p->handlers[i].type_idx.length + p->handlers[i].addr.length;
@@ -462,12 +447,13 @@ u4 DexParser::parse_encoded_catch_handler(const u4 offset,
     return offset + seek_add + p->catch_add_addr.length;
 }
 
-void DexParser::parse_encoded_catch_handler_list(const u4 offset,
+u4 DexParser::parse_encoded_catch_handler_list(const u4 offset,
     encoded_catch_handler_list* p) const
 {
     p->size.parse(this->dex_file_, offset);
 
     p->list = new encoded_catch_handler[p->size.value];
+    u4 handler_list_size = 0;
     u4 seek_add = p->size.length;
     for (u4 i = 0; i < p->size.value; i++)
     {
@@ -475,6 +461,8 @@ void DexParser::parse_encoded_catch_handler_list(const u4 offset,
         u4 handler_size = parse_encoded_catch_handler(offset + seek_add, handler);
         seek_add += handler_size;
     }
+
+    return offset + seek_add;
 }
 
 void DexParser::parse_code_list(const u4 size, const u4 offset) const
@@ -494,40 +482,66 @@ void DexParser::parse_code_list(const u4 size, const u4 offset) const
     for (u4 i = 0; i < size; i++)
     {
         printf("\nparse %d, code_item.\n\n", i);
-        printf("seek_add: %d", seek_add);
-
-        if (0 != _fseeki64(this->dex_file_, static_cast<long long>(offset) +
-            seek_add, 0))
-        {
-            printf("#parse_code_list - seek file error.\n");
-            return;
-        }
+        printf("seek_add: %u\n", seek_add);
 
         const auto item = &code_list[i];
 
-        // size: registers_size, ins_size, outs_size, tries_size, debug_info_off, insns_size
-        const u4 part_szie = sizeof(u2) * 4 + sizeof(u4) * 2;
-        if (0 == fread(item, part_szie, 1, this->dex_file_))
+        // parse:
+        // registers_size
+        // ins_size
+        // outs_size
+        // tries_size
+        // debug_info_off
+        // insns_size
         {
-            printf("#parse_code_list - read file error.\n");
-            return;
+            if (0 != _fseeki64(this->dex_file_, static_cast<long long>(offset) +
+                seek_add, 0))
+            {
+                printf("#parse_code_list - seek file error.\n");
+                return;
+            }
+
+            // size: registers_size, ins_size, outs_size, tries_size,
+            // debug_info_off, insns_size
+            const u4 part_szie = sizeof(u2) * 4 + sizeof(u4) * 2;
+            if (0 == fread(item, part_szie, 1, this->dex_file_))
+            {
+                printf("#parse_code_list - read file error.\n");
+                return;
+            }
+
+            seek_add += part_szie;
         }
 
-        seek_add += part_szie;
+#ifdef _CODE_LIST_INFO
+        printf("registers_size: %u\n", item->registers_size);
+        printf("ins_size: %u\n", item->ins_size);
+        printf("outs_size: %u\n", item->outs_size);
+        printf("tries_size: %u\n", item->tries_size);
+        printf("debug_info_off: %u\n", item->debug_info_off);
+        printf("insns_size: %u\n", item->insns_size);
+#endif // _CODE_LIST_INFO
 
-        if (0 != _fseeki64(this->dex_file_, static_cast<long long>(offset) + 
-            seek_add, 0))
+        // parse insns.
         {
-            printf("#parse_code_list - seek file error.");
-            return;
+            if (0 != _fseeki64(this->dex_file_, static_cast<long long>(offset) +
+                seek_add, 0))
+            {
+                printf("#parse_code_list - seek file error.");
+                return;
+            }
+
+            item->insns = new u2[item->insns_size];
+            if (0 == fread(item->insns, sizeof(u2), item->insns_size, this->dex_file_))
+            {
+                printf("#parse_code_list - read file errr.");
+                return;
+            }
         }
-        
-        u2* insns = new u2[item->insns_size];
-        if (0 == fread(insns, sizeof(u2), item->insns_size, this->dex_file_))
-        {
-            printf("#parse_code_list - read file errr.");
-            return;
-        }
+
+#ifdef _CODE_LIST_INFO
+        Printer::print_ushort_array(item->insns, item->insns_size);
+#endif // _CODE_LIST_INFO
 
         if (item->tries_size != 0)
         {
@@ -537,19 +551,10 @@ void DexParser::parse_code_list(const u4 size, const u4 offset) const
             // 2. ignore parse tries.
             seek_add += sizeof(try_item) * item->tries_size;
 
-            // 3. ignore parse handlers.
+            // 3. parse handlers.
             encoded_catch_handler_list handler_list = encoded_catch_handler_list();
             parse_encoded_catch_handler_list(offset + seek_add, &handler_list);
         }
-    }
-
-    for (u4 i = 0; i < size; i++)
-    {
-        delete[] code_list[i].insns;
-        code_list[i].insns = nullptr;
-
-        delete[] code_list[i].tries;
-        code_list[i].insns = nullptr;
     }
 
     delete[] code_list;

@@ -19,8 +19,11 @@ typedef int16_t   s2;
 typedef int32_t   s4;
 typedef int64_t   s8;
 
-//typedef u1* uleb128;
-//typedef u1* uleb128p1;
+struct uleb128;
+struct sleb128;
+
+void parse_uleb128(/* u1[5] */u1* leb128_buffer, uleb128* p);
+void parse_sleb128(/* u1[5] */u1* leb128_buffer, sleb128* p);
 
 struct uleb128
 {
@@ -38,7 +41,7 @@ struct uleb128
     {
         if (0 != fseek(dex_file, offset, 0))
         {
-            printf("#parse - seek file error.\n");
+            printf("uleb128#parse - seek file error.\n");
             return;
         }
 
@@ -47,7 +50,7 @@ struct uleb128
 
         if (0 == fread(leb128_buffer, sizeof(u1), 5, dex_file))
         {
-            printf("#parse_class_data_list - read file error.\n");
+            printf("uleb128#parse - read file error.\n");
             return;
         }
 
@@ -75,7 +78,7 @@ struct sleb128
     {
         if (0 != fseek(dex_file, offset, 0))
         {
-            printf("#parse - seek file error.\n");
+            printf("sleb128#parse - seek file error.\n");
             return;
         }
 
@@ -84,7 +87,7 @@ struct sleb128
 
         if (0 == fread(leb128_buffer, sizeof(u1), 5, dex_file))
         {
-            printf("#parse_class_data_list - read file error.\n");
+            printf("sleb128#parse - read file error.\n");
             return;
         }
 
@@ -442,26 +445,9 @@ struct string_data_item
     string_data_item(FILE* dex_file, const u4 offset)
     {
         // parse utf16_size.
-        {
-            if (0 != fseek(dex_file, offset, 0))
-            {
-                printf("#string_data_item - seek file error.");
-                return;
-            }
+        this->utf16_size = uleb128();
+        this->utf16_size.parse(dex_file, offset);
 
-            const auto leb128_buffer = new u1[5];
-            memset(leb128_buffer, 0, 5);
-
-            if (0 == fread(leb128_buffer, sizeof(u1), 5, dex_file))
-            {
-                printf("#string_data_item - read file error.\n");
-                return;
-            }
-
-            this->utf16_size = uleb128();
-            parse_uleb128(leb128_buffer, &this->utf16_size);
-        }
-        
         // parse data.
         {
             // 最后一个留给 '\0' 用。
@@ -667,9 +653,16 @@ struct class_data_item
 
     ~class_data_item()
     {
+        delete[] this->static_fields;
         this->static_fields = nullptr;
+
+        delete[] this->instance_fields;
         this->instance_fields = nullptr;
+
+        delete[] this->direct_methods;
         this->direct_methods = nullptr;
+
+        delete[] this->virtual_methods;
         this->virtual_methods = nullptr;
     }
 
@@ -745,6 +738,14 @@ struct encoded_catch_handler
 {
     encoded_catch_handler() :size(sleb128()), handlers(nullptr), 
         catch_add_addr(uleb128()) {}
+    ~encoded_catch_handler()
+    {
+        if (handlers != nullptr)
+        {
+            delete[] this->handlers;
+            this-> handlers = nullptr;
+        }
+    }
 
     /*
       此列表中捕获类型的数量。如果为非正数，则该值是捕获类型数量的负数，捕获数量后
@@ -766,6 +767,14 @@ struct encoded_catch_handler
 struct encoded_catch_handler_list
 {
     encoded_catch_handler_list() :size(uleb128()), list(nullptr){}
+    ~encoded_catch_handler_list()
+    {
+        if (list != nullptr)
+        {
+            delete[] this->list;
+            this->list = nullptr;
+        }
+    }
 
     uleb128 size;  // 列表的大小（以条目数表示）。
     /*
@@ -779,6 +788,15 @@ struct code_item
     code_item() : registers_size(0), ins_size(0), outs_size(0), tries_size(0),
         debug_info_off(0), insns_size(0), insns(nullptr), padding(0),
         tries(nullptr), handlers(encoded_catch_handler_list()) {}
+
+    ~code_item()
+    {
+        delete[] this->insns;
+        this->insns = nullptr;
+
+        delete[] this->tries;
+        this->tries = nullptr;
+    }
 
     u2 registers_size; // 此代码使用的寄存器数量。
     u2 ins_size;       // 此代码所用方法的传入参数的字数。
