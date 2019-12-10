@@ -92,44 +92,43 @@ void DexParser::parse_map_list()
 // */
 void DexParser::parse_string_list(const u4 size, const u4 offset)
 {
-    // offset to string ids.
-    if (0 != fseek(this->dex_file_, offset, 0))
-    {
-        printf("#parse_string_list - seek file error.");
-        return;
-    }
+    printf("string ids count: %u\n", size);
+    printf("string ids offset: %u\n", offset);
 
-    const auto string_ids_size = size;
-    if (string_ids_size == 0)
+    if (size == 0)
     {
         printf("#parse_string_list - not found string ids.\n");
         return;
     }
 
-    printf("string ids count: %u\n", string_ids_size);
-    printf("string ids offset: %u\n", offset);
-
     // parse string id items.
-    this->string_ids_ = new string_id_item[string_ids_size];
-    if (0 == fread(this->string_ids_, sizeof(string_id_item),
-        string_ids_size, this->dex_file_))
     {
-        printf("#parse_string_list - read file error.");
-        return;
+        if (0 != fseek(this->dex_file_, offset, 0))
+        {
+            printf("#parse_string_list - seek file error.");
+            return;
+        }
+
+        this->string_ids_ = new string_id_item[size];
+        if (0 == fread(this->string_ids_, sizeof(string_id_item),  size, 
+            this->dex_file_))
+        {
+            printf("#parse_string_list - read file error.");
+            return;
+        }
     }
 
-    printf("string item offset array: \n");
+    // parse string data items.
+    this->string_list_size_ = size;
+    this->string_list_ = new string_data_item[size];
 
-    this->string_list_size_ = string_ids_size;
-    this->string_list_ = new string_data_item[string_ids_size];
-
-    for (u4 i = 0; i < string_ids_size; i++)
+    for (u4 i = 0; i < size; i++)
     {
         const auto str_off = this->string_ids_[i].string_data_off;
 #ifdef _STRING_INFO_PRINT_
         printf("\nstring offset: %d\n", str_off);
 #endif
-        this->string_list_[i] = string_data_item(this->dex_file_, str_off);
+        this->string_list_[i].parse(this->dex_file_, str_off);
 #ifdef _STRING_INFO_PRINT_
         printf("string: %s\n", this->string_list_[i].data);
 #endif
@@ -185,8 +184,7 @@ void DexParser::parse_proto_ids(const u4 size, const u4 offset)
 
     this->proto_list_ = new proto_id_item[size];
 
-    if (0 == fread(this->proto_list_, sizeof(proto_id_item), size,
-        this->dex_file_))
+    if (0 == fread(this->proto_list_, sizeof(proto_id_item), size, this->dex_file_))
     {
         printf("#parse_proto_ids - read file error.");
         return;
@@ -217,8 +215,7 @@ void DexParser::parse_field_ids(const u4 size, const u4 offset) const
 
     auto field_list = new field_id_item[size];
 
-    if (0 == fread(field_list, sizeof(field_id_item), size,
-        this->dex_file_))
+    if (0 == fread(field_list, sizeof(field_id_item), size, this->dex_file_))
     {
         printf("#parse_field_ids - read file error.\n");
         return;
@@ -250,8 +247,7 @@ void DexParser::parse_method_ids(const u4 size, const u4 offset) const
 
     auto method_list = new method_id_item[size];
 
-    if (0 == fread(method_list, sizeof(method_id_item), size,
-        this->dex_file_))
+    if (0 == fread(method_list, sizeof(method_id_item), size, this->dex_file_))
     {
         printf("#parse_method_ids - read file error.\n");
         return;
@@ -285,8 +281,7 @@ void DexParser::parse_class_defs(const u4 size, const u4 offset) const
 
     auto class_def_list = new class_def_item[size];
 
-    if (0 == fread(class_def_list, sizeof(class_def_item), size,
-        this->dex_file_))
+    if (0 == fread(class_def_list, sizeof(class_def_item), size, this->dex_file_))
     {
         printf("#parse_class_defs - read file error.\n");
         return;
@@ -410,59 +405,16 @@ void DexParser::parse_class_data_list(const u4 size, const u4 offset) const
         item->virtual_methods = new encoded_method[item->virtual_methods_size.value];
         for (u4 j = 0; j < item->virtual_methods_size.value; j++)
         {
+            encoded_method* vmethod = &item->virtual_methods[j];
             parse_encoded_method(offset + seek_add, &item->virtual_methods[j]);
 
-            seek_add += item->virtual_methods[j].method_idx_diff.length +
-                item->virtual_methods[j].access_flags.length +
-                item->virtual_methods[j].code_off.length;
+            seek_add += vmethod->method_idx_diff.length +
+                vmethod->access_flags.length + vmethod->code_off.length;
         }
     }
 
     delete[] class_data_list;
     class_data_list = nullptr;
-}
-
-void DexParser::parse_encoded_type_addr_pair(const u4 offset, encoded_type_addr_pair* p) const
-{
-    p->type_idx.parse(this->dex_file_, offset);
-    p->addr.parse(this->dex_file_, offset + p->type_idx.length);
-}
-
-u4 DexParser::parse_encoded_catch_handler(const u4 offset,
-    encoded_catch_handler* p) const
-{
-    p->size.parse(this->dex_file_, offset);
-
-    p->handlers = new encoded_type_addr_pair[abs(p->size.value)];
-    u4 seek_add = 0;
-    const u4 t_szie = abs(p->size.value);
-    for (u4 i = 0; i < t_szie; i++)
-    {
-        parse_encoded_type_addr_pair(offset + seek_add, &p->handlers[i]);
-        seek_add += p->handlers[i].type_idx.length + p->handlers[i].addr.length;
-    }
-
-    p->catch_add_addr.parse(this->dex_file_, offset + seek_add);
-
-    return offset + seek_add + p->catch_add_addr.length;
-}
-
-u4 DexParser::parse_encoded_catch_handler_list(const u4 offset,
-    encoded_catch_handler_list* p) const
-{
-    p->size.parse(this->dex_file_, offset);
-
-    p->list = new encoded_catch_handler[p->size.value];
-    u4 handler_list_size = 0;
-    u4 seek_add = p->size.length;
-    for (u4 i = 0; i < p->size.value; i++)
-    {
-        encoded_catch_handler* handler = &p->list[i];
-        u4 handler_size = parse_encoded_catch_handler(offset + seek_add, handler);
-        seek_add += handler_size;
-    }
-
-    return offset + seek_add;
 }
 
 void DexParser::parse_code_list(const u4 size, const u4 offset) const
@@ -476,85 +428,24 @@ void DexParser::parse_code_list(const u4 size, const u4 offset) const
         return;
     }
 
-    auto code_list = new code_item[size];
+    code_item* code_list = new code_item[size];
 
     u4 seek_add = 0;
     for (u4 i = 0; i < size; i++)
     {
-        printf("\nparse %d, code_item.\n\n", i);
+        printf("\nparse %d code_item:\n\n", i);
         printf("seek_add: %u\n", seek_add);
 
-        const auto item = &code_list[i];
-
-        // parse:
-        // registers_size
-        // ins_size
-        // outs_size
-        // tries_size
-        // debug_info_off
-        // insns_size
+        u4 item_size;
+        code_item* item = &code_list[i];
+        item_size = item->parse(this->dex_file_, offset + seek_add);
+        if (item_size == -1)
         {
-            if (0 != _fseeki64(this->dex_file_, static_cast<long long>(offset) +
-                seek_add, 0))
-            {
-                printf("#parse_code_list - seek file error.\n");
-                return;
-            }
-
-            // size: registers_size, ins_size, outs_size, tries_size,
-            // debug_info_off, insns_size
-            const u4 part_szie = sizeof(u2) * 4 + sizeof(u4) * 2;
-            if (0 == fread(item, part_szie, 1, this->dex_file_))
-            {
-                printf("#parse_code_list - read file error.\n");
-                return;
-            }
-
-            seek_add += part_szie;
+            printf("parse code list error.\n");
+            return;
         }
 
-#ifdef _CODE_LIST_INFO
-        printf("registers_size: %u\n", item->registers_size);
-        printf("ins_size: %u\n", item->ins_size);
-        printf("outs_size: %u\n", item->outs_size);
-        printf("tries_size: %u\n", item->tries_size);
-        printf("debug_info_off: %u\n", item->debug_info_off);
-        printf("insns_size: %u\n", item->insns_size);
-#endif // _CODE_LIST_INFO
-
-        // parse insns.
-        {
-            if (0 != _fseeki64(this->dex_file_, static_cast<long long>(offset) +
-                seek_add, 0))
-            {
-                printf("#parse_code_list - seek file error.");
-                return;
-            }
-
-            item->insns = new u2[item->insns_size];
-            if (0 == fread(item->insns, sizeof(u2), item->insns_size, this->dex_file_))
-            {
-                printf("#parse_code_list - read file errr.");
-                return;
-            }
-        }
-
-#ifdef _CODE_LIST_INFO
-        Printer::print_ushort_array(item->insns, item->insns_size);
-#endif // _CODE_LIST_INFO
-
-        if (item->tries_size != 0)
-        {
-            // 1. ignore parse padding.
-            seek_add += sizeof(u2);
-
-            // 2. ignore parse tries.
-            seek_add += sizeof(try_item) * item->tries_size;
-
-            // 3. parse handlers.
-            encoded_catch_handler_list handler_list = encoded_catch_handler_list();
-            parse_encoded_catch_handler_list(offset + seek_add, &handler_list);
-        }
+        seek_add += item_size;
     }
 
     delete[] code_list;
@@ -636,7 +527,7 @@ void DexParser::parse()
             parse_class_data_list(item.size, item.offset);
             break;
         case TYPE_CODE_ITEM:
-            // parse_code_list(item.size, item.offset);
+            parse_code_list(item.size, item.offset);
             break;
         case TYPE_STRING_DATA_ITEM:
             printf("ignore.\n");

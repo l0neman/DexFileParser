@@ -2,11 +2,11 @@
 #include "Formatter.h"
 #include <iostream>
 
-void Printer::print_ushort_array(uint16_t const* array, const unsigned int size)
+void Printer::print_ushort_hex_array(uint16_t const* array, const unsigned int size)
 {
     for (unsigned int i = 0; i < size; i++)
     {
-        printf("%d ", array[i]);
+        printf("%.4x ", array[i]);
     }
 
     printf("\n");

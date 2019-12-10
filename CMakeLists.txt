@@ -4,10 +4,10 @@
 cmake_minimum_required (VERSION 3.8)
 
 # enable map_list info.
-add_definitions(-D_MAP_LIST_PRINT_)
+# add_definitions(-D_MAP_LIST_PRINT_)
 
 # enable string_list info.
-add_definitions(-D_STRING_INFO_PRINT_)
+# add_definitions(-D_STRING_INFO_PRINT_)
 
 # enable type_list info.
 # add_definitions(_D_TYPE_LIST_INFO_)
@@ -25,10 +25,10 @@ add_definitions(-D_STRING_INFO_PRINT_)
 # add_definitions(-D_CLASS_DEF_LIST_INFO_)
 
 # enable class_data_list info.
-add_definitions(-D_CLASS_DATA_LIST)
+# add_definitions(-D_CLASS_DATA_LIST)
 
 # enable code_item info.
-# add_definitions(-D_CODE_LIST_INFO)
+add_definitions(-D_CODE_LIST_INFO)
 
 # Add source to this project's executable.
 add_executable (

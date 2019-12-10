@@ -432,6 +432,8 @@ struct map_list
 
 struct string_id_item
 {
+    string_id_item(): string_data_off(0) {}
+    ~string_id_item() = default;
     /*
       从文件开头到此项的字符串数据的偏移量。该偏移量应该是到 data 区段中某个位置的
       偏移量。
@@ -442,10 +444,17 @@ struct string_id_item
 struct string_data_item
 {
     string_data_item():utf16_size(uleb128()), data(nullptr) {}
-    string_data_item(FILE* dex_file, const u4 offset)
+    ~string_data_item()
+    {
+        if (this->data != nullptr) {
+            delete[] this->data;
+            this->data = nullptr;
+        }
+    }
+
+    void parse(FILE* dex_file, const u4 offset)
     {
         // parse utf16_size.
-        this->utf16_size = uleb128();
         this->utf16_size.parse(dex_file, offset);
 
         // parse data.
@@ -457,13 +466,13 @@ struct string_data_item
             if (0 != _fseeki64(dex_file, static_cast<long long>(offset) +
                 this->utf16_size.length, 0))
             {
-                printf("#parse_string_list - seek file error.");
+                printf("string_data_item#parse - seek file error.");
                 return;
             }
 
             if (0 == fread(str_buf, sizeof(char) * (str_size - 1), 1, dex_file))
             {
-                printf("#parse_string_list - read file error.");
+                printf("string_data_item#parse - read file error.");
                 return;
             }
 
@@ -729,6 +738,13 @@ struct try_item
 struct encoded_type_addr_pair
 {
     encoded_type_addr_pair() : type_idx(uleb128()), addr(uleb128()) {}
+    ~encoded_type_addr_pair() = default;
+
+    void parse(FILE* dex_file, const u4 offset)
+    {
+        this->type_idx.parse(dex_file, offset);
+        this->addr.parse(dex_file, offset + this->type_idx.length);
+    }
 
     uleb128 type_idx;  // 要捕获的异常类型的 type_ids 列表中的索引。
     uleb128 addr;      // 关联的异常处理程序的字节码地址。
@@ -745,6 +761,24 @@ struct encoded_catch_handler
             delete[] this->handlers;
             this-> handlers = nullptr;
         }
+    }
+    
+    u4 parse(FILE* dex_file, const u4 offset)
+    {
+        this->size.parse(dex_file, offset);
+
+        this->handlers = new encoded_type_addr_pair[abs(this->size.value)];
+        u4 seek_add = 0;
+        const u4 t_szie = abs(this->size.value);
+        for (u4 i = 0; i < t_szie; i++)
+        {
+            this->handlers[i].parse(dex_file, offset + seek_add);
+            seek_add += this->handlers[i].type_idx.length + this->handlers[i].addr.length;
+        }
+
+        this->catch_add_addr.parse(dex_file, offset + seek_add);
+
+        return offset + seek_add + this->catch_add_addr.length;
     }
 
     /*
@@ -776,6 +810,22 @@ struct encoded_catch_handler_list
         }
     }
 
+    u4 parse(FILE *dex_file, const u4 offset)
+    {
+        u4 seek_add = 0;
+        this->size.parse(dex_file, offset);
+        seek_add += this->size.length;
+
+        this->list = new encoded_catch_handler[this->size.value];
+        u4 handler_list_size = 0;
+        for (u4 i = 0; i < this->size.value; i++)
+        {
+            seek_add += this->list[i].parse(dex_file, offset + seek_add);
+        }
+
+        return seek_add;
+    }
+
     uleb128 size;  // 列表的大小（以条目数表示）。
     /*
       处理程序列表的实际列表，直接表示（不作为偏移量）并依序连接。
@@ -788,7 +838,6 @@ struct code_item
     code_item() : registers_size(0), ins_size(0), outs_size(0), tries_size(0),
         debug_info_off(0), insns_size(0), insns(nullptr), padding(0),
         tries(nullptr), handlers(encoded_catch_handler_list()) {}
-
     ~code_item()
     {
         delete[] this->insns;
@@ -796,6 +845,89 @@ struct code_item
 
         delete[] this->tries;
         this->tries = nullptr;
+    }
+
+    u4 parse(FILE *dex_file, const u4 offset)
+    {
+        u4 seek_add = 0;
+        // parse:
+        // registers_size
+        // ins_size
+        // outs_size
+        // tries_size
+        // debug_info_off
+        // insns_size
+        {
+            if (0 != fseek(dex_file, offset, 0))
+            {
+                printf("code_item#parse - seek file error.\n");
+                return -1;
+            }
+
+            // size: registers_size, ins_size, outs_size, tries_size,
+            // debug_info_off, insns_size
+            const u4 part_szie = sizeof(u2) * 4 + sizeof(u4) * 2;
+            if (0 == fread(this, part_szie, 1, dex_file))
+            {
+                printf("code_item#parse - read file error.\n");
+                return -1;
+            }
+
+            seek_add += part_szie;
+        }
+
+#ifdef _CODE_LIST_INFO
+        printf("registers_size: %u\n", this->registers_size);
+        printf("ins_size: %u\n", this->ins_size);
+        printf("outs_size: %u\n", this->outs_size);
+        printf("tries_size: %u\n", this->tries_size);
+        printf("debug_info_off: %u\n", this->debug_info_off);
+        printf("insns_size: %u\n", this->insns_size);
+#endif // _CODE_LIST_INFO
+
+        // parse insns.
+        if (this->insns_size != 0)
+        {
+            if (0 != _fseeki64(dex_file, static_cast<long long>(offset) +
+                seek_add, 0))
+            {
+                printf("code_item#parse - seek file error.");
+                return -1;
+            }
+
+            this->insns = new u2[this->insns_size];
+            if (0 == fread(this->insns, sizeof(u2), this->insns_size, dex_file))
+            {
+                printf("code_item#parse - read file errr.");
+                return -1;
+            }
+
+            seek_add += sizeof(u2) * this->insns_size;
+
+#ifdef _CODE_LIST_INFO
+            // Printer::print_ushort_hex_array(this->insns, this->insns_size);
+#endif // _CODE_LIST_INFO
+        }
+
+        // parse optinal item.
+        if (this->tries_size != 0)
+        {
+            // 1. ignore parse padding.
+            if (this->insns_size % 0 == 1) 
+            {
+                seek_add += sizeof(u2);
+            }
+
+            // 2. ignore parse tries.
+            seek_add += sizeof(try_item) * this->tries_size;
+
+            // 3. parse handlers.
+            encoded_catch_handler_list handler_list = encoded_catch_handler_list();
+            printf("parce handler list.\n");
+            seek_add += handler_list.parse(dex_file, offset + seek_add);
+        }
+
+        return seek_add;
     }
 
     u2 registers_size; // 此代码使用的寄存器数量。

@@ -22,11 +22,6 @@ private:
     void parse_encoded_field(const u4 offset, encoded_field* p) const;
     void parse_encoded_method(const u4 offset, encoded_method* p) const;
     void parse_class_data_list(const u4 size, const u4 offset) const;
-    void parse_encoded_type_addr_pair(const u4 offset, encoded_type_addr_pair *p) const;
-    u4 parse_encoded_catch_handler(const u4 offset,
-        encoded_catch_handler* p) const;
-    u4 parse_encoded_catch_handler_list(const u4 offset,
-        encoded_catch_handler_list* p) const;
     void parse_code_list(const u4 size, const u4 offset) const;
     void call_site_ids();
     void method_handles();
