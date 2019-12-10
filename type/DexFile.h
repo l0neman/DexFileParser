@@ -765,20 +765,26 @@ struct encoded_catch_handler
     
     u4 parse(FILE* dex_file, const u4 offset)
     {
-        this->size.parse(dex_file, offset);
-
-        this->handlers = new encoded_type_addr_pair[abs(this->size.value)];
         u4 seek_add = 0;
+        this->size.parse(dex_file, offset);
+        seek_add += this->size.length;
+
         const u4 t_szie = abs(this->size.value);
+        this->handlers = new encoded_type_addr_pair[t_szie];
         for (u4 i = 0; i < t_szie; i++)
         {
             this->handlers[i].parse(dex_file, offset + seek_add);
             seek_add += this->handlers[i].type_idx.length + this->handlers[i].addr.length;
         }
 
-        this->catch_add_addr.parse(dex_file, offset + seek_add);
+        u4 add_size = 0;
+        if (this->size.value <= 0)
+        {
+            this->catch_add_addr.parse(dex_file, offset + seek_add);
+            add_size = this->catch_add_addr.length;
+        }
 
-        return offset + seek_add + this->catch_add_addr.length;
+        return seek_add + add_size;
     }
 
     /*
@@ -820,7 +826,8 @@ struct encoded_catch_handler_list
         u4 handler_list_size = 0;
         for (u4 i = 0; i < this->size.value; i++)
         {
-            seek_add += this->list[i].parse(dex_file, offset + seek_add);
+            encoded_catch_handler& handler = this->list[i];
+            seek_add += handler.parse(dex_file, offset + seek_add);
         }
 
         return seek_add;
@@ -912,13 +919,13 @@ struct code_item
         // parse optinal item.
         if (this->tries_size != 0)
         {
-            // 1. ignore parse padding.
-            if (this->insns_size % 0 == 1) 
+            if (this->insns_size % 2 == 1) 
             {
+                // 1. skip parse padding.
                 seek_add += sizeof(u2);
             }
 
-            // 2. ignore parse tries.
+            // 2. skip parse tries.
             seek_add += sizeof(try_item) * this->tries_size;
 
             // 3. parse handlers.

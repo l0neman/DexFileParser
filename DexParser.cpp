@@ -127,11 +127,14 @@ void DexParser::parse_string_list(const u4 size, const u4 offset)
         const auto str_off = this->string_ids_[i].string_data_off;
 #ifdef _STRING_INFO_PRINT_
         printf("\nstring offset: %d\n", str_off);
-#endif
-        this->string_list_[i].parse(this->dex_file_, str_off);
+#endif // _STRING_INFO_PRINT_
+
+        string_data_item& item = this->string_list_[i];
+        item.parse(this->dex_file_, str_off);
+
 #ifdef _STRING_INFO_PRINT_
         printf("string: %s\n", this->string_list_[i].data);
-#endif
+#endif // _STRING_INFO_PRINT_
     }
 }
 
@@ -422,27 +425,29 @@ void DexParser::parse_code_list(const u4 size, const u4 offset) const
     printf("code list size: %u\n", size);
     printf("code list offset: %u\n", offset);
 
-    if (0 != _fseeki64(this->dex_file_, static_cast<long long>(offset), 0))
-    {
-        printf("#parse_code_list - seek file error.\n");
-        return;
-    }
-
     code_item* code_list = new code_item[size];
 
     u4 seek_add = 0;
     for (u4 i = 0; i < size; i++)
     {
+
+#ifdef _CODE_LIST_INFO
         printf("\nparse %d code_item:\n\n", i);
         printf("seek_add: %u\n", seek_add);
+#endif // _CODE_LIST_INFO
 
-        u4 item_size;
         code_item* item = &code_list[i];
-        item_size = item->parse(this->dex_file_, offset + seek_add);
+        u4 item_size = item->parse(this->dex_file_, offset + seek_add);
         if (item_size == -1)
         {
             printf("parse code list error.\n");
             return;
+        }
+
+        // Byte aligned!.
+        {
+            auto mod = item_size % 4;
+            item_size += (mod == 0 ? 0 : 4 - mod);
         }
 
         seek_add += item_size;
