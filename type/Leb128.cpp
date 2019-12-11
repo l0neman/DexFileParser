@@ -104,14 +104,14 @@ uint32_t Leb128::unsigned_leb128_size(uint32_t data)
     return count;
 }
 
-uint32_t __inline __builtin_clz(uint32_t value) {
+uint32_t __inline builtin_clz(uint32_t value) {
     unsigned long leading_zero = 0;
     if (_BitScanReverse(&leading_zero, value))
         return 31 - leading_zero;
     return 32;
 }
 
-uint32_t __inline __builtin_clzll(uint64_t value) {
+uint32_t __inline builtin_clzll(uint64_t value) {
     unsigned long leading_zero = 0;
     if (_BitScanReverse64(&leading_zero, value))
         return 63 - leading_zero;
@@ -121,7 +121,7 @@ uint32_t __inline __builtin_clzll(uint64_t value) {
 template < typename T>
   static constexpr int CLZ(T x) {
       return (sizeof(T) == sizeof(uint32_t)) ?
-      __builtin_clz(x) : __builtin_clzll(x);
+      builtin_clz(x) : builtin_clzll(x);
 }
 
 int32_t Leb128::signed_leb128_size(uint32_t data)

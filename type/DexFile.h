@@ -823,7 +823,6 @@ struct encoded_catch_handler_list
         seek_add += this->size.length;
 
         this->list = new encoded_catch_handler[this->size.value];
-        u4 handler_list_size = 0;
         for (u4 i = 0; i < this->size.value; i++)
         {
             encoded_catch_handler& handler = this->list[i];
