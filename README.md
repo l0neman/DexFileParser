@@ -2,7 +2,7 @@
 
 Android Dex File Parser.
 
-## AOSP 源码：
+## AOSP 源码结构定义：
 
 1. `dalvik/libdex/DexFile.h`
 2. `art/libdexfile/dex/dex_file.h`
