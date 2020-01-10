@@ -11,5 +11,5 @@ Android Dex File Parser.
 
 - [Dalvik 可执行文件格式](https://source.android.google.cn/devices/tech/dalvik/dex-format )
 
-- [Dalvik 直字节码](https://source.android.google.cn/devices/tech/dalvik/dalvik-bytecode.html )
+- [Dalvik 字节码](https://source.android.google.cn/devices/tech/dalvik/dalvik-bytecode.html )
 
