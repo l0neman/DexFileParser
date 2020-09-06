@@ -3,7 +3,7 @@
 #include "DexParser.h"
 #include "type/DexFile.h"
 
-// todo: ÎÒÃÇÓ¦¸Ã²ÉÓÃÃæÏò¶ÔÏóµÄ·½Ê½½âÎö uleb128£¬²»È»Ì«Âé·³ÁË¡£
+// todo: æˆ‘ä»¬åº”è¯¥é‡‡ç”¨é¢å‘å¯¹è±¡çš„æ–¹å¼è§£æ uleb128ï¼Œä¸ç„¶å¤ªéº»çƒ¦äº†ã€‚
 
 void DexParser::parse_header_item()
 {

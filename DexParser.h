@@ -30,19 +30,19 @@ private:
     proto_id_item get_proto_item(const u4 index) const;
 
     FILE* dex_file_;
-    // ÎÄ¼şÍ·¡£
+    // æ–‡ä»¶å¤´ã€‚
     header_item dex_header_;
-    // ÀàĞÍÓ³Éä±í¡£
+    // ç±»å‹æ˜ å°„è¡¨ã€‚
     map_list map_list_;
-    // ×Ö·û´®Æ«ÒÆĞÅÏ¢¡£
+    // å­—ç¬¦ä¸²åç§»ä¿¡æ¯ã€‚
     string_id_item* string_ids_;
-    // ×Ö·û´®ÊıÁ¿¡£
+    // å­—ç¬¦ä¸²æ•°é‡ã€‚
     u4 string_list_size_;
-    // ×Ö·û´®ÁĞ±í¡£
+    // å­—ç¬¦ä¸²åˆ—è¡¨ã€‚
     string_data_item* string_list_;
-    // ÀàĞÍÁĞ±í¡£
+    // ç±»å‹åˆ—è¡¨ã€‚
     type_id_item* type_list_;
-    // Ô­ĞÍÁĞ±í¡£
+    // åŸå‹åˆ—è¡¨ã€‚
     proto_id_item* proto_list_;
 };
 
