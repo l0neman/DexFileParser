@@ -142,7 +142,7 @@ inline void parse_sleb128(/* u1[5] */u1* leb128_buffer, sleb128* p)
     p->length = length;
 }
 
-// �ֽ����ǳ�����
+// 字节序标记常量。
 enum
 {
     ENDIAN_CONSTANT         = 0x12345678,
@@ -164,13 +164,13 @@ enum
     TYPE_TYPE_LIST                  = 0x1001, // type_list	                size: 4 + (item.size * 2)
     TYPE_ANNOTATION_SET_REF_LIST    = 0x1002, // annotation_set_ref_list    size: 4 + (item.size * 4)
     TYPE_ANNOTATION_SET_ITEM        = 0x1003, // annotation_set_item	    size: 4 + (item.size * 4)
-    TYPE_CLASS_DATA_ITEM            = 0x2000, // class_data_item	        size: ��ʽ���������
-    TYPE_CODE_ITEM                  = 0x2001, // code_item	                size: ��ʽ���������
-    TYPE_STRING_DATA_ITEM           = 0x2002, // string_data_item	        size: ��ʽ���������
-    TYPE_DEBUG_INFO_ITEM            = 0x2003, // debug_info_item	        size: ��ʽ���������
-    TYPE_ANNOTATION_ITEM            = 0x2004, // annotation_item	        size: ��ʽ���������
-    TYPE_ENCODED_ARRAY_ITEM         = 0x2005, // encoded_array_item	        size: ��ʽ���������
-    TYPE_ANNOTATIONS_DIRECTORY_ITEM = 0x2006, // annotations_directory_item size: ��ʽ���������
+    TYPE_CLASS_DATA_ITEM            = 0x2000, // class_data_item	        size: 隐式；必须解析
+    TYPE_CODE_ITEM                  = 0x2001, // code_item	                size: 隐式；必须解析
+    TYPE_STRING_DATA_ITEM           = 0x2002, // string_data_item	        size: 隐式；必须解析
+    TYPE_DEBUG_INFO_ITEM            = 0x2003, // debug_info_item	        size: 隐式；必须解析
+    TYPE_ANNOTATION_ITEM            = 0x2004, // annotation_item	        size: 隐式；必须解析
+    TYPE_ENCODED_ARRAY_ITEM         = 0x2005, // encoded_array_item	        size: 隐式；必须解析
+    TYPE_ANNOTATIONS_DIRECTORY_ITEM = 0x2006, // annotations_directory_item size: 隐式；必须解析
 };
 
 inline const char* type_string(const u2 type)
@@ -312,90 +312,90 @@ struct header_item
         proto_ids_size(0), proto_ids_off(0), field_ids_size(0), field_ids_off(0),
         method_ids_size(0), method_ids_off(0), class_defs_size(0), class_defs_off(0),
         data_size(0), data_off(0) {}
-    /* ħ�� */
+    /* 魔数 */
     u1 magic[8];
     /*
-      �ļ�ʣ�����ݣ��� magic �ʹ��ֶ�֮�����������)�� adler32 У��ͣ�
-      ���ڼ���ļ��������
+      文件剩余内容（除 magic 和此字段之外的所有内容)的 adler32 校验和；
+      用于检测文件损坏情况。
      */
     u1 checksum;
     /*
-      �ļ�ʣ�����ݣ��� magic��checksum �ʹ��ֶ�֮�����������)�� SHA-1 ǩ������ϣ)��
-      ���ڶ��ļ�����Ψһ��ʶ��
+      文件剩余内容（除 magic、checksum 和此字段之外的所有内容)的 SHA-1 签名（哈希)；
+      用于对文件进行唯一标识。
      */
     u1 signature[20];
-    /* �����ļ���������ͷ)�Ĵ�С�����ֽ�Ϊ��λ */
+    /* 整个文件（包括标头)的大小，以字节为单位 */
     u4 file_size;
     /*
-      ��ͷ����������)�Ĵ�С�����ֽ�Ϊ��λ����һ����������һ���̶ȵ����/��ǰ�����ԣ�
-      �������ø�ʽʧЧ��
+      标头（整个区段)的大小，以字节为单位。这一项允许至少一定程度的向后/向前兼容性，
+      而不必让格式失效。
      */
     u4 header_size;
-    /* �ֽ����� */
+    /* 字节序标记 */
     u4 endian_tag;
-    /* �������εĴ�С��������ļ�δ���о�̬���ӣ����ֵΪ 0 */
+    /* 链接区段的大小；如果此文件未进行静态链接，则该值为 0 */
     u4 link_size;
     /*
-      ���ļ���ͷ���������ε�ƫ��������� link_size == 0�����ֵΪ 0��
-      ��ƫ���������Ϊ����ֵ)Ӧ���ǵ� link_data ���ε�ƫ������
+      从文件开头到链接区段的偏移量；如果 link_size == 0，则该值为 0。
+      该偏移量（如果为非零值)应该是到 link_data 区段的偏移量。
      */
     u4 link_off;
-    /* ���ļ���ͷ��ӳ�����ƫ��������ƫ����������Ϊ����)Ӧ���ǵ� data ���ε�ƫ���� */
+    /* 从文件开头到映射项的偏移量。该偏移量（必须为非零)应该是到 data 区段的偏移量 */
     u4 map_off;
-    /* �ַ�����ʶ���б��е��ַ������� */
+    /* 字符串标识符列表中的字符串数量 */
     u4 string_ids_size;
     /*
-      ���ļ���ͷ���ַ�����ʶ���б���ƫ��������� string_ids_size == 0���������)��
-      ���ֵΪ 0����ƫ���������Ϊ����ֵ)Ӧ���ǵ� string_ids ���ο�ͷ��ƫ������
+      从文件开头到字符串标识符列表的偏移量；如果 string_ids_size == 0（极端情况)，
+      则该值为 0。该偏移量（如果为非零值)应该是到 string_ids 区段开头的偏移量。
      */
     u4 string_ids_off;
-    /* ���ͱ�ʶ���б��е�Ԫ�����������Ϊ 65535 */
+    /* 类型标识符列表中的元素数量，最多为 65535 */
     u4 type_ids_size;
     /*
-      ���ļ���ͷ�����ͱ�ʶ���б���ƫ��������� type_ids_size == 0���������)��
-      ���ֵΪ 0����ƫ���������Ϊ����ֵ)Ӧ���ǵ� type_ids ���ο�ͷ��ƫ������
+      从文件开头到类型标识符列表的偏移量；如果 type_ids_size == 0（极端情况)，
+      则该值为 0。该偏移量（如果为非零值)应该是到 type_ids 区段开头的偏移量。
      */
     u4 type_ids_off;
-    /* ԭ�ͱ�ʶ���б��е�Ԫ�����������Ϊ 65535 */
+    /* 原型标识符列表中的元素数量，最多为 65535 */
     u4 proto_ids_size;
     /*
-      ���ļ���ͷ��ԭ�ͱ�ʶ���б���ƫ��������� proto_ids_size == 0���������)��
-      ���ֵΪ 0����ƫ���������Ϊ����ֵ)Ӧ���ǵ� proto_ids ���ο�ͷ��ƫ������
+      从文件开头到原型标识符列表的偏移量；如果 proto_ids_size == 0（极端情况)，
+      则该值为 0。该偏移量（如果为非零值)应该是到 proto_ids 区段开头的偏移量。
      */
     u4 proto_ids_off;
-    /* �ֶα�ʶ���б��е�Ԫ������ */
+    /* 字段标识符列表中的元素数量 */
     u4 field_ids_size;
     /*
-      ���ļ���ͷ���ֶα�ʶ���б���ƫ��������� field_ids_size == 0�����ֵΪ 0��
-      ��ƫ���������Ϊ����ֵ)Ӧ���ǵ� field_ids ���ο�ͷ��ƫ������
+      从文件开头到字段标识符列表的偏移量；如果 field_ids_size == 0，则该值为 0。
+      该偏移量（如果为非零值)应该是到 field_ids 区段开头的偏移量。
      */
     u4 field_ids_off;
-    /* ������ʶ���б��е�Ԫ������ */
+    /* 方法标识符列表中的元素数量 */
     u4 method_ids_size;
     /*
-      ���ļ���ͷ��������ʶ���б���ƫ��������� method_ids_size == 0�����ֵΪ 0��
-      ��ƫ���������Ϊ����ֵ)Ӧ���ǵ� method_ids ���ο�ͷ��ƫ����
+      从文件开头到方法标识符列表的偏移量；如果 method_ids_size == 0，则该值为 0。
+      该偏移量（如果为非零值)应该是到 method_ids 区段开头的偏移量
      */
     u4 method_ids_off;
-    /* �ඨ���б��е�Ԫ������ */
+    /* 类定义列表中的元素数量 */
     u4 class_defs_size;
     /*
-      ���ļ���ͷ���ඨ���б���ƫ��������� class_defs_size == 0���������)��
-      ���ֵΪ 0����ƫ���������Ϊ����ֵ)Ӧ���ǵ� class_defs ���ο�ͷ��ƫ������
+      从文件开头到类定义列表的偏移量；如果 class_defs_size == 0（极端情况)，
+      则该值为 0。该偏移量（如果为非零值)应该是到 class_defs 区段开头的偏移量。
      */
     u4 class_defs_off;
-    /* data ���εĴ�С�����ֽ�Ϊ��λ)������ֵ������ sizeof(uint) ��ż���� */
+    /* data 区段的大小（以字节为单位)。该数值必须是 sizeof(uint) 的偶数倍 */
     u4 data_size;
-    /* ���ļ���ͷ�� data ���ο�ͷ��ƫ���� */
+    /* 从文件开头到 data 区段开头的偏移量 */
     u4 data_off;
 };
 
 struct map_item
 {
-    u2 type;   // ������͡�
-    u2 unused; //��δʹ�á�
-    u4 size;   // ��ָ��ƫ�������ҵ�����������
-    u4 offset; // ���ļ���ͷ��������ƫ������
+    u2 type;   // 项的类型。
+    u2 unused; //（未使用。
+    u4 size;   // 在指定偏移量处找到的项数量。
+    u4 offset; // 从文件开头到相关项的偏移量。
 };
 
 inline void print_map_item(map_item const* map_item)
@@ -426,8 +426,8 @@ struct map_list
         }
     }
 
-    u4 size;          // �б��Ĵ�С������Ŀ����ʾ����
-    map_item* list;   // �б���Ԫ�ء�
+    u4 size;          // 列表的大小（以条目数表示）。
+    map_item* list;   // 列表的元素。
 };
 
 struct string_id_item
@@ -435,8 +435,8 @@ struct string_id_item
     string_id_item(): string_data_off(0) {}
     ~string_id_item() = default;
     /*
-      ���ļ���ͷ��������ַ������ݵ�ƫ��������ƫ����Ӧ���ǵ� data ������ĳ��λ�õ�
-      ƫ������
+      从文件开头到此项的字符串数据的偏移量。该偏移量应该是到 data 区段中某个位置的
+      偏移量。
      */
     u4 string_data_off;
 };
@@ -459,7 +459,7 @@ struct string_data_item
 
         // parse data.
         {
-            // ���һ������ '\0' �á�
+            // 最后一个留给 '\0' 用。
             const auto str_size = this->utf16_size.value + 1;
             const auto str_buf = new char[str_size];
 
@@ -481,12 +481,12 @@ struct string_data_item
         }
     }
     /*
-      ���ַ����Ĵ�С���� UTF-16 ���뵥Ԫ��������ϵͳ��Ϊ���ַ������ȡ���Ϊ��λ��
-      Ҳ����˵�����Ǹ��ַ����Ľ��볤�ȣ����볤�������� 0 �ֽڵ�λ�ã���
+      此字符串的大小；以 UTF-16 代码单元（在许多系统中为“字符串长度”）为单位。
+      也就是说，这是该字符串的解码长度（编码长度隐含在 0 字节的位置）。
      */
     uleb128 utf16_size;
     /*
-      һϵ�� MUTF-8 ���뵥Ԫ���ֳư�λ�ֽڣ������һ��ֵΪ 0 ���ֽڡ�
+      一系列 MUTF-8 代码单元（又称八位字节），后跟一个值为 0 的字节。
      */
     u1* data;
 };
@@ -494,8 +494,8 @@ struct string_data_item
 struct type_id_item
 {
     /*
-      �����������ַ����� string_ids �б��е����������ַ�������������Ķ����
-      TypeDescriptor ���﷨��
+      此类描述符字符串的 string_ids 列表中的索引。该字符串必须符合上文定义的
+      TypeDescriptor 的语法。
      */
     u4 descriptor_idx;
 };
@@ -503,16 +503,16 @@ struct type_id_item
 struct proto_id_item
 {
     /*
-      ��ԭ�͵ļ��ʽ�������ַ����� string_ids �б��е����������ַ�������������Ķ���
-      �� ShortyDescriptor ���﷨�����ұ��������ķ������ͺͲ������Ӧ��
+      此原型的简短式描述符字符串的 string_ids 列表中的索引。该字符串必须符合上文定义
+      的 ShortyDescriptor 的语法，而且必须与该项的返回类型和参数相对应。
      */
     u4 shorty_ids;
-    /* ��ԭ�͵ķ������͵� type_ids �б��е����� */
+    /* 此原型的返回类型的 type_ids 列表中的索引 */
     u4 return_type_idx;
     /*
-      ���ļ���ͷ����ԭ�͵Ĳ��������б���ƫ�����������ԭ��û�в��������ֵΪ 0��
-      ��ƫ���������Ϊ����ֵ��Ӧ��λ�� data �����У������е�����Ӧ����������
-      ��"type_list"��ָ���ĸ�ʽ�����⣬���ö��б��е����� void �����κ����á�
+      从文件开头到此原型的参数类型列表的偏移量；如果此原型没有参数，则该值为 0。
+      该偏移量（如果为非零值）应该位于 data 区段中，且其中的数据应采用下文中
+      “"type_list"”指定的格式。此外，不得对列表中的类型 void 进行任何引用。
      */
     u4 parameters_off;
 };
@@ -520,15 +520,15 @@ struct proto_id_item
 struct field_id_item
 {
     /*
-      ���ֶεĶ������ type_ids �б��е���������������ǡ��ࡱ���ͣ��������ǡ����顱��
-      ����Ԫ�����͡�
+      此字段的定义符的 type_ids 列表中的索引。此项必须是“类”类型，而不能是“数组”或
+      “基元”类型。
      */
     u2 class_idx;
-    /* ���ֶε����͵� type_ids �б��е����� */
+    /* 此字段的类型的 type_ids 列表中的索引 */
     u2 type_idx;
     /*
-      ���ֶε����Ƶ� string_ids �б��е����������ַ�������������Ķ���� MemberName
-      ���﷨��
+      此字段的名称的 string_ids 列表中的索引。该字符串必须符合上文定义的 MemberName
+      的语法。
      */
     u4 name_idx;
 };
@@ -536,15 +536,15 @@ struct field_id_item
 struct method_id_item
 {
     /*
-      �˷����Ķ������ type_ids �б��е���������������ǡ��ࡱ�����顱���ͣ���������
-      ����Ԫ�����͡�
+      此方法的定义符的 type_ids 列表中的索引。此项必须是“类”或“数组”类型，而不能是
+      “基元”类型。
      */
     u2 class_idx;
-    /* �˷�����ԭ�͵� proto_ids �б��е����� */
+    /* 此方法的原型的 proto_ids 列表中的索引 */
     u2 proto_idx;
     /*
-      �˷������Ƶ� string_ids �б��е����������ַ�������������Ķ���� MemberName
-      ���﷨��
+      此方法名称的 string_ids 列表中的索引。该字符串必须符合上文定义的 MemberName
+      的语法。
      */
     u4 name_idx;
 };
@@ -552,52 +552,52 @@ struct method_id_item
 struct class_def_item
 {
     /*
-      ����� type_ids �б��е���������������ǡ��ࡱ���ͣ��������ǡ����顱�򡰻�Ԫ�����͡�
+      此类的 type_ids 列表中的索引。此项必须是“类”类型，而不能是“数组”或“基元”类型。
      */
     u4 class_idx;
     /*
-      ��ķ��ʱ�ǣ�public��final �ȣ����й����飬����ġ�access_flags ���塱��
+      类的访问标记（public、final 等）。有关详情，请参阅“access_flags 定义”。
      */
     u4 access_flag;
     /*
-     ����� type_ids �б��е��������������û�г��ࣨ�����Ǹ��࣬���� Object����
-     ���ֵΪ����ֵ NO_INDEX�����������ڳ��࣬���������ǡ��ࡱ���ͣ���������
-     �����顱�򡰻�Ԫ�����͡�
+     超类的 type_ids 列表中的索引。如果此类没有超类（即它是根类，例如 Object），
+     则该值为常量值 NO_INDEX。如果此类存在超类，则此项必须是“类”类型，而不能是
+     “数组”或“基元”类型。
      */
     u4 superclass_idx;
     /*
-      ���ļ���ͷ���ӿ��б���ƫ���������û�нӿڣ����ֵΪ 0����ƫ����Ӧ��λ�� data
-      ���Σ������е�����Ӧ���������С�type_list��ָ���ĸ�ʽ�����б���ÿ��Ԫ�ض�������
-      ���ࡱ���ͣ��������ǡ����顱�򡰻�Ԫ�����ͣ������Ҳ��ð����κ��ظ��
+      从文件开头到接口列表的偏移量；如果没有接口，则该值为 0。该偏移量应该位于 data
+      区段，且其中的数据应采用下文中“type_list”指定的格式。该列表的每个元素都必须是
+      “类”类型（而不能是“数组”或“基元”类型），并且不得包含任何重复项。
      */
     u4 interfaces_off;
     /*
-     �ļ�����������ࣨ���ٴ󲿷֣���ԭʼ��Դ�����Ƶ� string_ids �б��е�������
-     ���߸�ֵΪ����ֵ NO_INDEX���Ա�ʾȱ��������Ϣ���κ�ָ�������� debug_info_item
-     �����Ը��Ǵ�Դ�ļ�����Ԥ������Ǵ������ֻ������һ��Դ�ļ���
+     文件（包含这个类（至少大部分）的原始来源）名称的 string_ids 列表中的索引；
+     或者该值为特殊值 NO_INDEX，以表示缺少这种信息。任何指定方法的 debug_info_item
+     都可以覆盖此源文件，但预期情况是大多数类只能来自一个源文件。
      */
     u4 source_file_idx;
     /*
-      ���ļ���ͷ�������ע�ͽṹ��ƫ�������������û��ע�ͣ����ֵΪ 0����ƫ����
-      �����Ϊ����ֵ��Ӧ��λ�� data ���Σ������е�����Ӧ����������
-      ��annotations_directory_item��ָ���ĸ�ʽ��ͬʱ�����������Ϊ������������á�
+      从文件开头到此类的注释结构的偏移量；如果此类没有注释，则该值为 0。该偏移量
+      （如果为非零值）应该位于 data 区段，且其中的数据应采用下文中
+      “annotations_directory_item”指定的格式，同时所有项将此类作为定义符进行引用。
      */
     u4 annotations_off;
     /*
-      ���ļ���ͷ������Ĺ��������ݵ�ƫ�������������û�������ݣ����ֵΪ 0���������
-      �п��ܳ��֣����磬��������Ǳ�ǽӿڣ�����ƫ���������Ϊ����ֵ��Ӧ��λ�� data
-      ���Σ������е�����Ӧ���������С�class_data_item��ָ���ĸ�ʽ��ͬʱ�����������
-      Ϊ������������á�
+      从文件开头到此项的关联类数据的偏移量；如果此类没有类数据，则该值为 0（这种情况
+      有可能出现，例如，如果此类是标记接口）。该偏移量（如果为非零值）应该位于 data
+      区段，且其中的数据应采用下文中“class_data_item”指定的格式，同时所有项将此类作
+      为定义符进行引用。
      */
     u4 class_data_off;
     /*
-      ���ļ���ͷ�� static �ֶεĳ�ʼֵ�б���ƫ���������û�и��б����������� static
-      �ֶζ���ʹ�� 0 �� null ���г�ʼ���������ֵΪ 0����ƫ����Ӧ��λ�� data ���Σ�
-      �����е�����Ӧ���������С�encoded_array_item��ָ���ĸ�ʽ��������Ĵ�С���ó���
-      ������������ static �ֶε��������� static �ֶ�����Ӧ��Ԫ��Ӧ�������Ӧ��
-      field_list ����������˳��ÿ������Ԫ�ص����;�����������Ӧ�ֶε�����������ƥ�䡣
-      ����������е�Ԫ�ر� static �ֶ��е��٣���ʣ���ֶν�ʹ���ʵ����� 0 �� null
-      ���г�ʼ����
+      从文件开头到 static 字段的初始值列表的偏移量；如果没有该列表（并且所有 static
+      字段都将使用 0 或 null 进行初始化），则该值为 0。该偏移量应该位于 data 区段，
+      且其中的数据应采用下文中“encoded_array_item”指定的格式。该数组的大小不得超出
+      此类所声明的 static 字段的数量，且 static 字段所对应的元素应采用相对应的
+      field_list 中所声明的顺序每个数组元素的类型均必须与其相应字段的声明类型相匹配。
+      如果该数组中的元素比 static 字段中的少，则剩余字段将使用适当类型 0 或 null
+      进行初始化。
      */
     u4 static_values_off;
 };
@@ -605,8 +605,8 @@ struct class_def_item
 struct call_site_id_item
 {
     /*
-      ���ļ���ͷ�����õ㶨���ƫ��������ƫ����Ӧλ�����������У������е�����Ӧ������
-      ���С�call_site_item��ָ���ĸ�ʽ��
+      从文件开头到调用点定义的偏移量。该偏移量应位于数据区段中，且其中的数据应采用下
+      文中“call_site_item”指定的格式。
      */
     u4 call_site_off;
 };
@@ -616,12 +616,12 @@ struct encoded_field
     encoded_field() : field_idx_diff(uleb128()), access_flags(uleb128()) {}
 
     /*
-      ���ֶα�ʶ���������ƺ����������� field_ids �б��е�������
-      �����ʾΪ���б���ǰһ��Ԫ�ص�����֮��Ĳ�ֵ���б��е�һ��Ԫ�ص�������ֱ�ӱ�ʾ������
+      此字段标识（包括名称和描述符）的 field_ids 列表中的索引；
+      它会表示为与列表中前一个元素的索引之间的差值。列表中第一个元素的索引则直接表示出来。
      */
     uleb128 field_idx_diff;
     /*
-      �ֶεķ��ʱ�ǣ�public��final �ȣ���
+      字段的访问标记（public、final 等）。
      */
     uleb128 access_flags;
 };
@@ -633,17 +633,17 @@ struct encoded_method
 
     ~encoded_method() = default;
     /*
-      �˷�����ʶ���������ƺ����������� method_ids �б��е�������
-      �����ʾΪ���б���ǰһ��Ԫ�ص�����֮��Ĳ�ֵ���б��е�һ��Ԫ�ص�������ֱ�ӱ�ʾ������
+      此方法标识（包括名称和描述符）的 method_ids 列表中的索引；
+      它会表示为与列表中前一个元素的索引之间的差值。列表中第一个元素的索引则直接表示出来。
      */
     uleb128 method_idx_diff;
     /*
-      �����ķ��ʱ�ǣ�public��final �ȣ���
+      方法的访问标记（public、final 等）。
      */
     uleb128 access_flags;
     /*
-      ���ļ���ͷ���˷�������ṹ��ƫ����������˷����� abstract �� native�����ֵΪ 0��
-      ��ƫ����Ӧ���ǵ� data ������ĳ��λ�õ�ƫ���������ݸ�ʽ�����ĵġ�code_item��ָ����
+      从文件开头到此方法代码结构的偏移量；如果此方法是 abstract 或 native，则该值为 0。
+      该偏移量应该是到 data 区段中某个位置的偏移量。数据格式由下文的“code_item”指定。
      */
     uleb128 code_off;
 };
@@ -675,27 +675,27 @@ struct class_data_item
         this->virtual_methods = nullptr;
     }
 
-    uleb128 static_fields_size;    // �����ж���ľ�̬�ֶε�������
-    uleb128 instance_fields_size;  // �����ж����ʵ���ֶε�������
-    uleb128 direct_methods_size;   // �����ж����ֱ�ӷ�����������
-    uleb128 virtual_methods_size;  // �����ж�������ⷽ����������
+    uleb128 static_fields_size;    // 此项中定义的静态字段的数量。
+    uleb128 instance_fields_size;  // 此项中定义的实例字段的数量。
+    uleb128 direct_methods_size;   // 此项中定义的直接方法的数量。
+    uleb128 virtual_methods_size;  // 此项中定义的虚拟方法的数量。
     /*
-      ����ľ�̬�ֶΣ���һϵ�б���Ԫ�ص���ʽ��ʾ����Щ�ֶα��밴 field_idx �������������
+      定义的静态字段；以一系列编码元素的形式表示。这些字段必须按 field_idx 以升序进行排序。
      */
     encoded_field* static_fields;
     /*
-      �����ʵ���ֶΣ���һϵ�б���Ԫ�ص���ʽ��ʾ����Щ�ֶα��밴 field_idx �������������
+      定义的实例字段；以一系列编码元素的形式表示。这些字段必须按 field_idx 以升序进行排序。
      */
     encoded_field* instance_fields;
     /*
-      �����ֱ�ӣ�static��private ���캯�����κ�һ������������һϵ�б���Ԫ�ص���ʽ
-      ��ʾ����Щ�������밴 method_idx �������������
+      定义的直接（static、private 或构造函数的任何一个）方法；以一系列编码元素的形式
+      表示。这些方法必须按 method_idx 以升序进行排序。
      */
     encoded_method* direct_methods;
     /*
-      ��������⣨�� static��private ���캯������������һϵ�б���Ԫ�ص���ʽ��ʾ��
-      ���б����ð����̳з��������Ǳ���������ʾ���า�ǡ���Щ�������밴 method_idx ��
-      ��������������ⷽ���� method_idx �������κ�ֱ�ӷ�����ͬ��
+      定义的虚拟（非 static、private 或构造函数）方法；以一系列编码元素的形式表示。
+      此列表不得包括继承方法，除非被此项所表示的类覆盖。这些方法必须按 method_idx 以
+      升序进行排序。虚拟方法的 method_idx 不得与任何直接方法相同。
      */
     encoded_method* virtual_methods;
 };
@@ -703,34 +703,34 @@ struct class_data_item
 struct type_item
 {
     type_item() : type_idx(0) {}
-    u2 type_idx;  // type_ids �б��е�������
+    u2 type_idx;  // type_ids 列表中的索引。
 };
 
 struct type_list
 {
     type_list(): size(0), list(type_item()) {}
 
-    u4 size;          // �б��Ĵ�С������Ŀ����ʾ��
-    type_item list;;  // �б���Ԫ�ء�
+    u4 size;          // 列表的大小（以条目数表示）
+    type_item list;;  // 列表的元素。
 };
 
 struct try_item
 {
     try_item() :start_addr(0), insn_count(0), handler_off(0) {}
     /*
-      ����Ŀ���ǵĴ�������ʼ��ַ���õ�ַ�ǵ���һ��������ָ�ͷ���ֵ� 16 λ����
-      ��Ԫ�ļ�����
+      此条目涵盖的代码块的起始地址。该地址是到第一个所涵盖指令开头部分的 16 位代码
+      单元的计数。
     */
     u4 start_addr;
     /*
-      ����Ŀ�����ǵ� 16 λ���뵥Ԫ�������������ǣ������������һ�����뵥Ԫ�� 
-      start_addr + insn_count - 1��
+      此条目所覆盖的 16 位代码单元的数量。所涵盖（包含）的最后一个代码单元是 
+      start_addr + insn_count - 1。
     */
     u2 insn_count;
     /*
-      �ӹ����� encoded_catch_hander_list ��ͷ���ֵ�����Ŀ�� encoded_catch_handler 
-      ��ƫ���������ֽ�Ϊ��λ������ƫ���������ǵ� encoded_catch_handler ��ͷ���ֵ�
-      ƫ������
+      从关联的 encoded_catch_hander_list 开头部分到此条目的 encoded_catch_handler 
+      的偏移量（以字节为单位）。此偏移量必须是到 encoded_catch_handler 开头部分的
+      偏移量。
     */
     u2 handler_off;
 };
@@ -746,8 +746,8 @@ struct encoded_type_addr_pair
         this->addr.parse(dex_file, offset + this->type_idx.length);
     }
 
-    uleb128 type_idx;  // Ҫ������쳣���͵� type_ids �б��е�������
-    uleb128 addr;      // �������쳣����������ֽ����ַ��
+    uleb128 type_idx;  // 要捕获的异常类型的 type_ids 列表中的索引。
+    uleb128 addr;      // 关联的异常处理程序的字节码地址。
 };
 
 struct encoded_catch_handler
@@ -788,18 +788,18 @@ struct encoded_catch_handler
     }
 
     /*
-      ���б��в������͵����������Ϊ�����������ֵ�ǲ������������ĸ���������������
-      ��һ����ȫ�����񡱴����������磬size Ϊ 0 ��ʾ��������Ϊ��ȫ�����񡱣���û����
-      ȷ���͵Ĳ���size Ϊ 2 ��ʾ��������ȷ���͵Ĳ��񣬵�û�С�ȫ���������͵Ĳ���
-      size Ϊ -1 ��ʾ��һ����ȷ���͵Ĳ����һ����ȫ���������͵Ĳ���
+      此列表中捕获类型的数量。如果为非正数，则该值是捕获类型数量的负数，捕获数量后
+      跟一个“全部捕获”处理程序。例如，size 为 0 表示捕获类型为“全部捕获”，而没有明
+      确类型的捕获。size 为 2 表示有两个明确类型的捕获，但没有“全部捕获”类型的捕获。
+      size 为 -1 表示有一个明确类型的捕获和一个“全部捕获”类型的捕获。
     */
     sleb128 size;
     /*
-      abs(size) ���������Ϣ����һ�ֲ������Ͷ�Ӧһ�������Ӧ�����ͽ��в��Ե�˳�����С�
+      abs(size) 编码项的信息流（一种捕获类型对应一项）；按照应对类型进行测试的顺序排列。
     */
     encoded_type_addr_pair *handlers;
     /*
-      ��ȫ�����񡱴���������ֽ����ַ��ֻ�е� size Ϊ������ʱ����Ԫ�زŻ���ڡ�
+      “全部捕获”处理程序的字节码地址。只有当 size 为非正数时，此元素才会存在。
     */
     uleb128 catch_add_addr;
 };
@@ -832,9 +832,9 @@ struct encoded_catch_handler_list
         return seek_add;
     }
 
-    uleb128 size;  // �б��Ĵ�С������Ŀ����ʾ����
+    uleb128 size;  // 列表的大小（以条目数表示）。
     /*
-      ���������б���ʵ���б���ֱ�ӱ�ʾ������Ϊƫ���������������ӡ�
+      处理程序列表的实际列表，直接表示（不作为偏移量）并依序连接。
     */
     encoded_catch_handler* list;
 };
@@ -936,41 +936,41 @@ struct code_item
         return seek_add;
     }
 
-    u2 registers_size; // �˴���ʹ�õļĴ���������
-    u2 ins_size;       // �˴������÷����Ĵ��������������
-    u2 outs_size;      // �˴�����з�����������Ĵ��������ռ��������
+    u2 registers_size; // 此代码使用的寄存器数量。
+    u2 ins_size;       // 此代码所用方法的传入参数的字数。
+    u2 outs_size;      // 此代码进行方法调用所需的传出参数空间的字数。
     /* 
-      ��ʵ���� try_item �����������ֵΪ����ֵ������Щ�����ʾΪ tries ����
-     ������λ�ڴ�ʵ���� insns �ĺ��棩�� 
+      此实例的 try_item 数量。如果此值为非零值，则这些项会显示为 tries 数组
+     （正好位于此实例中 insns 的后面）。 
     */
     u2 tries_size;
     /*
-      ���ļ���ͷ���˴���ĵ�����Ϣ���к� + �ֲ�������Ϣ�����е�ƫ���������û����
-      ����Ϣ�����ֵΪ 0����ƫ���������Ϊ����ֵ��Ӧ���ǵ� data ������ĳ��λ�õ�ƫ���������ݸ�ʽ�����ĵġ�debug_info_item��ָ����
+      从文件开头到此代码的调试信息（行号 + 局部变量信息）序列的偏移量；如果没有任
+      何信息，则该值为 0。该偏移量（如果为非零值）应该是到 data 区段中某个位置的偏移量。数据格式由下文的“debug_info_item”指定。
     */
     u4 debug_info_off;
-    u4 insns_size;   // ָ���б��Ĵ�С���� 16 λ���뵥ԪΪ��λ����
+    u4 insns_size;   // 指令列表的大小（以 16 位代码单元为单位）。
     /*
-      �ֽ����ʵ�����顣insns �����д���ĸ�ʽ���渽�ĵ� Dalvik �ֽ���ָ������ע�⣬
-      ���ܴ������Ϊ ushort �����飬������һЩ�ڲ��ṹ�����ڲ������ֽڶ��뷽ʽ��
-      ���⣬�������ǡ��λ��ĳ���ֽ��򽻻��ļ��У��򽻻�������ֻ�ڵ��� ushort �Ͻ�
-      �У��������ڽϴ���ڲ��ṹ�Ͻ��С�
+      字节码的实际数组。insns 数组中代码的格式由随附文档 Dalvik 字节码指定。请注意，
+      尽管此项被定义为 ushort 的数组，但仍有一些内部结构倾向于采用四字节对齐方式。
+      此外，如果此项恰好位于某个字节序交换文件中，则交换操作将只在单个 ushort 上进
+      行，而不是在较大的内部结构上进行。
     */
     u2* insns;
     /*
-      ����ѡ��ʹ tries ʵ�����ֽڶ�������ֽ���䡣ֻ�� tries_size Ϊ����ֵ�� 
-      insns_size ������ʱ����Ԫ�زŻ���ڡ�
+      （可选）使 tries 实现四字节对齐的两字节填充。只有 tries_size 为非零值且 
+      insns_size 是奇数时，此元素才会存在。
     */
     u2 padding;
     /*
-      ����ѡ�����ڱ�ʾ�ڴ����в����쳣��λ���Լ���ζ��쳣���д��������顣�������Ԫ
-      ���ڷ�Χ�ڲ����ص�������ֵ��ַ���մӵ͵��ߵ�˳�����С�ֻ�� tries_size Ϊ����
-      ֵʱ����Ԫ�زŻ���ڡ�
+      （可选）用于表示在代码中捕获异常的位置以及如何对异常进行处理的数组。该数组的元
+      素在范围内不得重叠，且数值地址按照从低到高的顺序排列。只有 tries_size 为非零
+      值时，此元素才会存在。
     */
     try_item* tries;
     /* 
-      ����ѡ�����ڱ�ʾ�����������б��͹������������ַ�����б����ֽڡ�ÿ�� try_item 
-      �����е��˽ṹ�ķ���ƫ������ֻ�� tries_size Ϊ����ֵʱ����Ԫ�زŻ���ڡ�
+      （可选）用于表示“捕获类型列表和关联处理程序地址”的列表的字节。每个 try_item 
+      都具有到此结构的分组偏移量。只有 tries_size 为非零值时，此元素才会存在。
     */
     encoded_catch_handler_list handlers;
 };
@@ -981,17 +981,17 @@ struct debug_info_item
         parameter_names(uleb128p1()){}
 
     /*
-      ״̬���� line �Ĵ����ĳ�ʼֵ������ʾʵ�ʵ�λ����Ŀ��
+      状态机的 line 寄存器的初始值。不表示实际的位置条目。
      */
     uleb128 line_start;
     /*
-      �ѱ���Ĳ������Ƶ�������ÿ������������Ӧ����һ�����ƣ���������ʵ�������� this
-     ������У���
+      已编码的参数名称的数量。每个方法参数都应该有一个名称，但不包括实例方法的 this
+     （如果有）。
      */
     uleb128 parameters_size;
     /*
-      �����������Ƶ��ַ���������NO_INDEX �ı���ֵ��ʾ�ù�������û�п��õ����ơ�
-      ��������������ǩ�������ڷ�����������ǩ���С�
+      方法参数名称的字符串索引。NO_INDEX 的编码值表示该关联参数没有可用的名称。
+      该类型描述符和签名隐含在方法描述符和签名中。
      */
     uleb128p1 parameter_names;
 };
@@ -1000,11 +1000,11 @@ struct field_annotation
 {
     field_annotation(): field_idx(0), annotations_off(0) {}
 
-    /* �ֶΣ���ע�ͣ���ʶ�� field_ids �б��е����� */
+    /* 字段（带注释）标识的 field_ids 列表中的索引 */
     u4 field_idx;
     /*
-      ���ļ���ͷ�����ֶε�ע���б���ƫ��������ƫ����Ӧ���ǵ� data ������ĳ��λ�õ�ƫ
-      ���������ݸ�ʽ�����ĵġ�annotation_set_item��ָ����
+      从文件开头到该字段的注释列表的偏移量。该偏移量应该是到 data 区段中某个位置的偏
+      移量。数据格式由下文的“annotation_set_item”指定。
      */
     u4 annotations_off;
 };
@@ -1013,11 +1013,11 @@ struct method_annotation
 {
     method_annotation(): method_idx(0), annotations_off(0) {}
 
-    /* ��������ע�ͣ���ʶ�� method_ids �б��е����� */
+    /* 方法（带注释）标识的 method_ids 列表中的索引 */
     u4 method_idx;
     /*
-      ���ļ���ͷ���÷���ע���б���ƫ��������ƫ����Ӧ���ǵ� data ������ĳ��λ�õ�ƫ������
-      ���ݸ�ʽ�����ĵġ�annotation_set_item��ָ����
+      从文件开头到该方法注释列表的偏移量。该偏移量应该是到 data 区段中某个位置的偏移量。
+      数据格式由下文的“annotation_set_item”指定。
      */
     u4 annotations_off;
 };
@@ -1026,11 +1026,11 @@ struct parameter_annotation
 {
     parameter_annotation(): method_idx(0), annotations_off(0) {}
 
-    /* �������������ע�ͣ���ʶ�� method_ids �б��е����� */
+    /* 方法（其参数带注释）标识的 method_ids 列表中的索引 */
     u4 method_idx;
     /*
-      ���ļ���ͷ���÷���������ע���б���ƫ��������ƫ����Ӧ���ǵ� data ������ĳ��λ�õ�
-      ƫ���������ݸ�ʽ�����ĵġ�annotation_set_ref_list��ָ����
+      从文件开头到该方法参数的注释列表的偏移量。该偏移量应该是到 data 区段中某个位置的
+      偏移量。数据格式由下文的“annotation_set_ref_list”指定。
      */
     u4 annotations_off;
 };
@@ -1043,24 +1043,24 @@ struct annotations_directory_item
         parameter_annotation(nullptr) {}
 
     /*
-      ���ļ���ͷ��ֱ���ڸ�����������ע�͵�ƫ�������������û���κ�ֱ��ע�ͣ����ֵΪ 0��
-      ��ƫ���������Ϊ����ֵ��Ӧ���ǵ� data ������ĳ��λ�õ�ƫ���������ݸ�ʽ�����ĵ�
-      ��annotation_set_item��ָ����
+      从文件开头到直接在该类上所做的注释的偏移量；如果该类没有任何直接注释，则该值为 0。
+      该偏移量（如果为非零值）应该是到 data 区段中某个位置的偏移量。数据格式由下文的
+      “annotation_set_item”指定。
      */
     u4 class_annotations_off;
-    u4 fields_size;                // ������ע�͵��ֶ�������
-    u4 annotated_methods_size;     // ������ע�͵ķ���������
-    u4 annotated_parameters_size;  // ������ע�͵ķ��������б���������
+    u4 fields_size;                // 此项所注释的字段数量。
+    u4 annotated_methods_size;     // 此项所注释的方法数量。
+    u4 annotated_parameters_size;  // 此项所注释的方法参数列表的数量。
     /*
-      Optional���������ֶε�ע���б������б��е�Ԫ�ر��밴 field_idx �������������
+      Optional，所关联字段的注释列表。该列表中的元素必须按 field_idx 以升序进行排序。
      */
     field_annotation* field_annotations;
     /*
-      Optional��������������ע���б������б��е�Ԫ�ر��밴 method_idx �������������
+      Optional，所关联方法的注释列表。该列表中的元素必须按 method_idx 以升序进行排序。
      */
     method_annotation* method_annotations;
     /*
-      Optional������������������ע���б������б��е�Ԫ�ر��밴 method_idx �������������
+      Optional，所关联方法参数的注释列表。该列表中的元素必须按 method_idx 以升序进行排序。
      */
     parameter_annotation* parameter_annotation;
 };
