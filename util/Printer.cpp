@@ -31,3 +31,13 @@ void Printer::print_hex_array(uint8_t const* array, const unsigned int size)
 
     printf("\n");
 }
+
+void Printer::print_hex_array2(uint16_t const* array, const unsigned int size)
+{
+    for (unsigned int i = 0; i < size; i++)
+    {
+        printf("%.2x ", array[i]);
+    }
+
+    printf("\n");
+}

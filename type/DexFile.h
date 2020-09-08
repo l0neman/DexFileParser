@@ -908,6 +908,9 @@ struct code_item
                 return -1;
             }
 
+            printf("insns: ");
+            Printer::print_hex_array2(this->insns, this->insns_size);
+
             seek_add += sizeof(u2) * this->insns_size;
 
 #ifdef _CODE_LIST_INFO

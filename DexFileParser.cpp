@@ -9,7 +9,7 @@ long uint_to_long(unsigned int a)
 int main()
 {
     std::cout << "Hello World!" << std::endl;
-    DexParser dex_parser(R"(..\..\..\dexfile\test3.dex)");
+    DexParser dex_parser(R"(..\..\..\dexfile\Hello.dex)");
     dex_parser.parse();
     return 0;
 }
