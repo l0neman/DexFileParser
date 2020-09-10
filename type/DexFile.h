@@ -318,7 +318,7 @@ struct header_item
       文件剩余内容（除 magic 和此字段之外的所有内容)的 adler32 校验和；
       用于检测文件损坏情况。
      */
-    u1 checksum;
+    u4 checksum;
     /*
       文件剩余内容（除 magic、checksum 和此字段之外的所有内容)的 SHA-1 签名（哈希)；
       用于对文件进行唯一标识。
@@ -1071,7 +1071,7 @@ struct annotations_directory_item
 inline void print_dex_header(header_item* dex_header) {
     printf("magic: ");
     Printer::print_hex_array(dex_header->magic, 8);
-    printf("checksum: %d\n", dex_header->checksum);
+    printf("checksum: %6x\n", dex_header->checksum);
 
     printf("signature: ");
     Printer::print_hex_array(dex_header->signature, 20);
